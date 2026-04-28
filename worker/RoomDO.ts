@@ -203,6 +203,9 @@ export class RoomDO extends DurableObject<Env> {
       case 'T_CLOSE_ROOM':
         return this.tCloseRoom(ws);
 
+      case 'S_PEEK':
+        return this.sPeek(ws, msg.code);
+
       case 'S_JOIN':
         return this.sJoin(ws, msg.code, msg.className, msg.sid);
 
@@ -343,6 +346,22 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   // ─────────── Student commands ───────────
+  private sPeek(ws: WebSocket, code: string): void {
+    if (!this.state.code) {
+      this.sendErr(ws, 'NO_ROOM', 'まだルームが開かれていません');
+      return;
+    }
+    if (code !== this.state.code) {
+      this.sendErr(ws, 'BAD_CODE', 'ルームコードが違います');
+      return;
+    }
+    if (this.state.phase === 'closed') {
+      this.sendErr(ws, 'ROOM_CLOSED', 'このルームは終了しました');
+      return;
+    }
+    this.send(ws, { type: 'PEEKED', state: this.publicState() });
+  }
+
   private sJoin(ws: WebSocket, code: string, className: string, sidIn?: string): void {
     if (!this.state.code) {
       this.sendErr(ws, 'NO_ROOM', 'まだルームが開かれていません');

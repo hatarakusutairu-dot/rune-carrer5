@@ -94,6 +94,7 @@ export type ClientMsg =
   | { type: 'T_NEXT_STAGE' }
   | { type: 'T_CLOSE_ROOM' }
   // 生徒
+  | { type: 'S_PEEK'; code: string }
   | { type: 'S_JOIN'; code: string; className: string; sid?: string }
   | { type: 'S_ANSWER'; gameId: GameId; payload: AnswerPayload }
   | { type: 'S_RETRY'; gameId: GameId }
@@ -115,6 +116,7 @@ export type AnswerPayload =
 
 export type ServerMsg =
   | { type: 'ROOM_CREATED'; code: string; teacherToken: string; state: PublicRoomState }
+  | { type: 'PEEKED'; state: PublicRoomState }
   | { type: 'JOINED'; sid: string; state: PublicRoomState }
   | { type: 'STATE'; state: PublicRoomState }
   | { type: 'PHASE_CHANGE'; state: PublicRoomState }
