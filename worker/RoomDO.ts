@@ -1,0 +1,571 @@
+import { DurableObject } from 'cloudflare:workers';
+import type {
+  AnswerPayload,
+  ClientMsg,
+  GameId,
+  PerClassAggregation,
+  Phase,
+  PublicRoomState,
+  ReactionEmoji,
+  SeedType,
+  ServerMsg,
+} from '@shared/protocol';
+import { REACTION_EMOJIS } from '@shared/protocol';
+import {
+  aggregateScores,
+  emptyScores,
+  scoreAnswer,
+  topType,
+  SEED_ORDER,
+} from '@shared/scoring';
+
+interface Env {
+  ROOM: DurableObjectNamespace;
+}
+
+interface AttachmentTeacher {
+  role: 'teacher';
+  token: string;
+}
+interface AttachmentStudent {
+  role: 'student';
+  sid: string;
+  className: string;
+}
+type Attachment = AttachmentTeacher | AttachmentStudent;
+
+interface InternalState {
+  code: string;
+  classes: string[];
+  phase: Phase;
+  currentStage: number;
+  currentGameId: GameId | null;
+  introCountdownAt: number | null;
+  activeStartedAt: number | null;
+  activeDurationMs: number | null;
+  teacherToken: string | null;
+  // 生徒情報
+  students: Map<string, { className: string; joinedAt: number }>;
+  // 回答（gameId → sid → payload）。再挑戦は反映しない
+  answers: Map<GameId, Map<string, AnswerPayload>>;
+  // 個人スコア累計（sid → SeedTypeスコア）
+  personalScores: Map<string, Record<SeedType, number>>;
+  // クラス別sid（クラス→sid集合）
+  classSids: Map<string, Set<string>>;
+}
+
+const generateToken = (): string => {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+};
+
+const generateSid = (): string => {
+  return crypto.randomUUID();
+};
+
+export class RoomDO extends DurableObject<Env> {
+  private state: InternalState;
+
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    this.state = this.createInitialState();
+  }
+
+  private createInitialState(): InternalState {
+    return {
+      code: '',
+      classes: [],
+      phase: 'lobby',
+      currentStage: 0,
+      currentGameId: null,
+      introCountdownAt: null,
+      activeStartedAt: null,
+      activeDurationMs: null,
+      teacherToken: null,
+      students: new Map(),
+      answers: new Map(),
+      personalScores: new Map(),
+      classSids: new Map(),
+    };
+  }
+
+  // 公開ステート（クライアント送信用）
+  private publicState(): PublicRoomState {
+    const perClassCount: Record<string, number> = {};
+    for (const cls of this.state.classes) {
+      perClassCount[cls] = this.state.classSids.get(cls)?.size ?? 0;
+    }
+    return {
+      code: this.state.code,
+      classes: this.state.classes,
+      phase: this.state.phase,
+      currentStage: this.state.currentStage,
+      currentGameId: this.state.currentGameId,
+      introCountdownAt: this.state.introCountdownAt,
+      activeStartedAt: this.state.activeStartedAt,
+      activeDurationMs: this.state.activeDurationMs,
+      totalStudents: this.state.students.size,
+      perClassCount,
+      serverTime: Date.now(),
+    };
+  }
+
+  // ─────────── HTTP entry ───────────
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (url.pathname === '/ws') {
+      const code = url.searchParams.get('room') ?? '';
+      if (!code) return new Response('Missing room', { status: 400 });
+      // 初回コネクションでコードを採用
+      if (!this.state.code) {
+        this.state.code = code;
+      } else if (this.state.code !== code) {
+        return new Response('Room code mismatch', { status: 409 });
+      }
+      const upgrade = request.headers.get('Upgrade');
+      if (upgrade !== 'websocket') {
+        return new Response('Expected websocket', { status: 426 });
+      }
+      const pair = new WebSocketPair();
+      const [client, server] = Object.values(pair);
+      this.ctx.acceptWebSocket(server);
+      return new Response(null, { status: 101, webSocket: client });
+    }
+
+    return new Response('Not found', { status: 404 });
+  }
+
+  // ─────────── WebSocket handlers (Hibernation API) ───────────
+  async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
+    let msg: ClientMsg;
+    try {
+      msg = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw));
+    } catch {
+      this.sendErr(ws, 'BAD_JSON', 'メッセージのJSON解釈に失敗しました');
+      return;
+    }
+    try {
+      await this.handleMessage(ws, msg);
+    } catch (e) {
+      this.sendErr(ws, 'INTERNAL', String((e as Error).message ?? e));
+    }
+  }
+
+  async webSocketClose(ws: WebSocket, _code: number, _reason: string, _wasClean: boolean): Promise<void> {
+    const att = this.getAttachment(ws);
+    if (att?.role === 'student') {
+      // 生徒のWS切断は通知のみ。状態は維持（再接続のため）
+      this.broadcastStudentCount();
+    }
+  }
+
+  async webSocketError(ws: WebSocket, _err: unknown): Promise<void> {
+    try {
+      ws.close(1011, 'error');
+    } catch {
+      // ignore
+    }
+  }
+
+  // ─────────── Message dispatch ───────────
+  private async handleMessage(ws: WebSocket, msg: ClientMsg): Promise<void> {
+    switch (msg.type) {
+      case 'PING':
+        this.send(ws, { type: 'PONG' });
+        return;
+
+      case 'T_CREATE_ROOM':
+        return this.tCreateRoom(ws, msg.classes);
+
+      case 'T_RESUME':
+        return this.tResume(ws, msg.teacherToken);
+
+      case 'T_START_GAME':
+        return this.tStartGame(ws, msg.gameId, msg.durationMs);
+
+      case 'T_END_GAME':
+        return this.tEndGame(ws);
+
+      case 'T_NEXT_GAME':
+        return this.tNextGame(ws);
+
+      case 'T_SKIP_GAME':
+        return this.tSkipGame(ws, msg.gameId);
+
+      case 'T_END_STAGE':
+        return this.tEndStage(ws);
+
+      case 'T_NEXT_STAGE':
+        return this.tNextStage(ws);
+
+      case 'T_CLOSE_ROOM':
+        return this.tCloseRoom(ws);
+
+      case 'S_JOIN':
+        return this.sJoin(ws, msg.code, msg.className, msg.sid);
+
+      case 'S_ANSWER':
+        return this.sAnswer(ws, msg.gameId, msg.payload);
+
+      case 'S_RETRY':
+        // 再挑戦：集計には影響しない、クライアント側で再表示するためのフラグ通知のみ
+        this.send(ws, { type: 'STATE', state: this.publicState() });
+        return;
+
+      case 'REACTION':
+        return this.handleReaction(msg.emoji);
+
+      default:
+        this.sendErr(ws, 'UNKNOWN_TYPE', '未知のメッセージタイプです');
+    }
+  }
+
+  // ─────────── Teacher commands ───────────
+  private tCreateRoom(ws: WebSocket, classes: string[]): void {
+    if (this.state.teacherToken) {
+      // 既にルーム作成済み → 既存講師に再接続要求
+      this.sendErr(ws, 'ROOM_EXISTS', 'このルームは既に作成済みです。再接続してください');
+      return;
+    }
+    // codeはfetchで既に設定済み（Workerから渡される）
+    this.state.classes = (classes ?? [])
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0)
+      .slice(0, 20);
+    if (this.state.classes.length === 0) {
+      this.state.classes = ['全員'];
+    }
+    for (const cls of this.state.classes) {
+      this.state.classSids.set(cls, new Set());
+    }
+    this.state.teacherToken = generateToken();
+    this.attach(ws, { role: 'teacher', token: this.state.teacherToken });
+    this.send(ws, {
+      type: 'ROOM_CREATED',
+      code: this.state.code,
+      teacherToken: this.state.teacherToken,
+      state: this.publicState(),
+    });
+  }
+
+  private tResume(ws: WebSocket, token: string): void {
+    if (token !== this.state.teacherToken) {
+      this.sendErr(ws, 'BAD_TOKEN', '講師トークンが一致しません');
+      return;
+    }
+    this.attach(ws, { role: 'teacher', token });
+    this.send(ws, { type: 'STATE', state: this.publicState() });
+  }
+
+  private requireTeacher(ws: WebSocket): boolean {
+    const att = this.getAttachment(ws);
+    if (att?.role !== 'teacher') {
+      this.sendErr(ws, 'NOT_TEACHER', '講師のみ操作できます');
+      return false;
+    }
+    return true;
+  }
+
+  private tStartGame(ws: WebSocket, gameId: GameId, durationMs: number): void {
+    if (!this.requireTeacher(ws)) return;
+    this.state.currentGameId = gameId;
+    this.state.phase = 'intro';
+    this.state.introCountdownAt = Date.now();
+    this.state.activeStartedAt = Date.now() + 3000; // 3秒カウントダウン後
+    this.state.activeDurationMs = durationMs;
+    this.broadcastPhase();
+    // 3秒後に active へ自動遷移
+    void this.ctx.storage.setAlarm(this.state.activeStartedAt);
+  }
+
+  private tEndGame(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    this.transitionToResults();
+  }
+
+  private tNextGame(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    this.state.phase = 'lobby';
+    this.state.currentGameId = null;
+    this.state.introCountdownAt = null;
+    this.state.activeStartedAt = null;
+    this.state.activeDurationMs = null;
+    this.broadcastPhase();
+  }
+
+  private tSkipGame(ws: WebSocket, gameId: GameId): void {
+    if (!this.requireTeacher(ws)) return;
+    // 集計は記録しない（誰もプレイしていない or プレイ中で打ち切り）
+    if (this.state.currentGameId === gameId) {
+      this.transitionToResults();
+    } else {
+      // 未開始のスキップ：何もしない（クライアント側がカーソル進める）
+      this.broadcastPhase();
+    }
+  }
+
+  private tEndStage(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    this.state.phase = 'stage_summary';
+    this.state.currentGameId = null;
+    this.broadcastPhase();
+    const summary = this.computeStageSummary();
+    this.broadcast({
+      type: 'STAGE_SUMMARY',
+      perClass: summary.perClass,
+      overall: summary.overall,
+    });
+  }
+
+  private tNextStage(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    this.state.currentStage = Math.min(this.state.currentStage + 1, 6);
+    this.state.phase = 'lobby';
+    this.broadcastPhase();
+  }
+
+  private tCloseRoom(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    this.state.phase = 'closed';
+    this.broadcastPhase();
+    // 全WS閉じる
+    for (const sock of this.ctx.getWebSockets()) {
+      try {
+        sock.close(1000, 'room closed');
+      } catch {
+        // ignore
+      }
+    }
+    // 状態リセット
+    this.state = this.createInitialState();
+  }
+
+  // ─────────── Student commands ───────────
+  private sJoin(ws: WebSocket, code: string, className: string, sidIn?: string): void {
+    if (!this.state.code) {
+      this.sendErr(ws, 'NO_ROOM', 'まだルームが開かれていません');
+      return;
+    }
+    if (code !== this.state.code) {
+      this.sendErr(ws, 'BAD_CODE', 'ルームコードが違います');
+      return;
+    }
+    if (this.state.phase === 'closed') {
+      this.sendErr(ws, 'ROOM_CLOSED', 'このルームは終了しました');
+      return;
+    }
+    if (!this.state.classes.includes(className)) {
+      this.sendErr(ws, 'BAD_CLASS', 'クラスが選択肢にありません');
+      return;
+    }
+    const sid = sidIn && this.state.students.has(sidIn) ? sidIn : generateSid();
+    if (!this.state.students.has(sid)) {
+      this.state.students.set(sid, { className, joinedAt: Date.now() });
+      let set = this.state.classSids.get(className);
+      if (!set) {
+        set = new Set();
+        this.state.classSids.set(className, set);
+      }
+      set.add(sid);
+    }
+    this.attach(ws, { role: 'student', sid, className });
+    this.send(ws, { type: 'JOINED', sid, state: this.publicState() });
+    this.broadcastStudentCount();
+  }
+
+  private sAnswer(ws: WebSocket, gameId: GameId, payload: AnswerPayload): void {
+    const att = this.getAttachment(ws);
+    if (att?.role !== 'student') {
+      this.sendErr(ws, 'NOT_STUDENT', '生徒のみ回答できます');
+      return;
+    }
+    let map = this.state.answers.get(gameId);
+    if (!map) {
+      map = new Map();
+      this.state.answers.set(gameId, map);
+    }
+    if (!map.has(att.sid)) {
+      // 初回のみ集計対象
+      map.set(att.sid, payload);
+      // 個人スコア累積
+      const prev = this.state.personalScores.get(att.sid) ?? emptyScores();
+      const add = scoreAnswer(payload);
+      const merged = { ...prev };
+      for (const k of SEED_ORDER) merged[k] = (merged[k] ?? 0) + add[k];
+      this.state.personalScores.set(att.sid, merged);
+    }
+    this.broadcastProgress(gameId);
+  }
+
+  // ─────────── Reactions ───────────
+  private handleReaction(emoji: ReactionEmoji): void {
+    if (!REACTION_EMOJIS.includes(emoji)) return;
+    this.broadcast({ type: 'REACTION_BURST', emoji, ts: Date.now() });
+  }
+
+  // ─────────── Aggregation ───────────
+  private transitionToResults(): void {
+    this.state.phase = 'results';
+    this.broadcastPhase();
+    if (this.state.currentGameId) {
+      const result = this.computeAggregation(this.state.currentGameId);
+      this.broadcast({ type: 'AGGREGATION', result });
+    }
+  }
+
+  private computeAggregation(gameId: GameId) {
+    const map = this.state.answers.get(gameId) ?? new Map<string, AnswerPayload>();
+    const allScores: Array<Record<SeedType, number>> = [];
+    const perClassMap = new Map<string, Array<Record<SeedType, number>>>();
+    for (const [sid, payload] of map) {
+      const score = scoreAnswer(payload);
+      allScores.push(score);
+      const info = this.state.students.get(sid);
+      if (info) {
+        const arr = perClassMap.get(info.className) ?? [];
+        arr.push(score);
+        perClassMap.set(info.className, arr);
+      }
+    }
+    const overallAvg = aggregateScores(allScores);
+    const perClass: PerClassAggregation[] = this.state.classes.map((cls) => {
+      const arr = perClassMap.get(cls) ?? [];
+      const avg = aggregateScores(arr);
+      return {
+        className: cls,
+        count: arr.length,
+        scoresAvg: avg,
+        topType: arr.length > 0 ? topType(avg) : null,
+      };
+    });
+    return {
+      gameId,
+      totalAnswers: map.size,
+      perClass,
+      overall: {
+        scoresAvg: overallAvg,
+        topType: allScores.length > 0 ? topType(overallAvg) : null,
+      },
+    };
+  }
+
+  private computeStageSummary() {
+    // 全ゲームの個人スコアからクラス別平均
+    const perClassMap = new Map<string, Array<Record<SeedType, number>>>();
+    const allScores: Array<Record<SeedType, number>> = [];
+    for (const [sid, score] of this.state.personalScores) {
+      allScores.push(score);
+      const info = this.state.students.get(sid);
+      if (info) {
+        const arr = perClassMap.get(info.className) ?? [];
+        arr.push(score);
+        perClassMap.set(info.className, arr);
+      }
+    }
+    const overallAvg = aggregateScores(allScores);
+    const perClass: PerClassAggregation[] = this.state.classes.map((cls) => {
+      const arr = perClassMap.get(cls) ?? [];
+      const avg = aggregateScores(arr);
+      return {
+        className: cls,
+        count: arr.length,
+        scoresAvg: avg,
+        topType: arr.length > 0 ? topType(avg) : null,
+      };
+    });
+    return {
+      perClass,
+      overall: {
+        scoresAvg: overallAvg,
+        topType: allScores.length > 0 ? topType(overallAvg) : null,
+      },
+    };
+  }
+
+  // ─────────── Alarm (intro -> active 自動遷移) ───────────
+  async alarm(): Promise<void> {
+    if (this.state.phase === 'intro') {
+      this.state.phase = 'active';
+      this.broadcastPhase();
+      // 時間切れで results へ自動遷移
+      if (this.state.activeStartedAt && this.state.activeDurationMs) {
+        const endAt = this.state.activeStartedAt + this.state.activeDurationMs;
+        await this.ctx.storage.setAlarm(endAt);
+      }
+    } else if (this.state.phase === 'active') {
+      this.transitionToResults();
+    }
+  }
+
+  // ─────────── Broadcast helpers ───────────
+  private broadcast(msg: ServerMsg): void {
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.send(JSON.stringify(msg));
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private broadcastPhase(): void {
+    this.broadcast({ type: 'PHASE_CHANGE', state: this.publicState() });
+  }
+
+  private broadcastStudentCount(): void {
+    const perClass: Record<string, number> = {};
+    for (const cls of this.state.classes) {
+      perClass[cls] = this.state.classSids.get(cls)?.size ?? 0;
+    }
+    this.broadcast({
+      type: 'STUDENT_COUNT',
+      total: this.state.students.size,
+      perClass,
+    });
+  }
+
+  private broadcastProgress(gameId: GameId): void {
+    const map = this.state.answers.get(gameId) ?? new Map<string, AnswerPayload>();
+    const perClass: Record<string, number> = {};
+    for (const cls of this.state.classes) perClass[cls] = 0;
+    for (const sid of map.keys()) {
+      const info = this.state.students.get(sid);
+      if (info) perClass[info.className] = (perClass[info.className] ?? 0) + 1;
+    }
+    this.broadcast({
+      type: 'PROGRESS',
+      gameId,
+      count: map.size,
+      total: this.state.students.size,
+      perClass,
+    });
+  }
+
+  // ─────────── Send helpers ───────────
+  private send(ws: WebSocket, msg: ServerMsg): void {
+    try {
+      ws.send(JSON.stringify(msg));
+    } catch {
+      // ignore
+    }
+  }
+
+  private sendErr(ws: WebSocket, code: string, message: string): void {
+    this.send(ws, { type: 'ERROR', code, message });
+  }
+
+  // ─────────── Attachment ───────────
+  private attach(ws: WebSocket, att: Attachment): void {
+    ws.serializeAttachment(att);
+  }
+
+  private getAttachment(ws: WebSocket): Attachment | null {
+    try {
+      return (ws.deserializeAttachment() as Attachment | null) ?? null;
+    } catch {
+      return null;
+    }
+  }
+}

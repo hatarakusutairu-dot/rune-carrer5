@@ -1,259 +1,304 @@
 # 技術構成・アーキテクチャ
 
-最終更新：2026-04-28
+最終更新：2026-04-28（v2 - Kahoot式同期設計に改訂）
 
 ## 1. 全体方針
 
-**「サーバーを持たない静的Webアプリ」** を基本方針とする。
-300名同時アクセスでも安定動作させるため、サーバー側処理を最小化し、
-診断・保存はすべてクライアント側で完結させる。
+**「Cloudflare Workers + Durable Objects による軽量リアルタイム同期」** を基本方針とする。
+Kahoot式の講師ペース管理を実現しつつ、300人同時参加でも安定動作させる。
+個人情報は依然ゼロ。ルーム状態は揮発（DB なし）。
 
 ---
 
 ## 2. アーキテクチャ図
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                   静的ホスティング                       │
-│      (GitHub Pages / Netlify / Vercel / Cloudflare)   │
-│                                                        │
-│   ┌──────────────────────────────────────────────┐    │
-│   │  HTML / CSS / JS（バンドル済み・キャッシュ可）  │    │
-│   └──────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────┘
-              ▲                              ▲
-              │ 初回ロード後はオフライン可     │
-              │                              │
-   ┌──────────┴──────────┐        ┌─────────┴──────────┐
-   │  講師PC（投影）      │        │  生徒スマホ/PC     │
-   │  /teacher           │        │  /student          │
-   │  - タイマー         │        │  - ミニゲーム      │
-   │  - 進行管理         │        │  - localStorage    │
-   │  - QR表示           │        │  - 診断            │
-   └─────────────────────┘        └────────────────────┘
-
-   ※ 講師画面と生徒画面の間にリアルタイム通信なし（MVP）
-   ※ 全データは各端末のlocalStorageに閉じる
+┌────────────────────────────────────────────────────────┐
+│           Cloudflare Workers ($5/月 Paid)               │
+│           https://rune-carrer5.<acct>.workers.dev       │
+│                                                          │
+│   ┌──────────────────────────────────────────────────┐ │
+│   │  Static Assets（dist/ をWorkerが配信）            │ │
+│   │  HTML / CSS / JS / 画像                          │ │
+│   └──────────────────────────────────────────────────┘ │
+│                                                          │
+│   ┌──────────────────────────────────────────────────┐ │
+│   │  WebSocket エンドポイント /ws?room=482917         │ │
+│   │   ├─ Durable Object: RoomDO (1ルーム=1インスタンス)│ │
+│   │   │   ├─ ルーム状態（フェーズ、現在のゲーム等）   │ │
+│   │   │   ├─ クラス別集計                            │ │
+│   │   │   └─ WebSocket Hibernation API でコスト最適化 │ │
+│   │   └─ 揮発：授業終了でデータ消失                   │ │
+│   └──────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────┘
+        ▲                                   ▲
+        │ WSS                               │ WSS
+        │                                   │
+   ┌────┴─────────┐                ┌───────┴────────────┐
+   │ 講師PC（投影） │                │ 生徒スマホ/PC×300人 │
+   │ /teacher     │                │ /student          │
+   │ ・ルーム作成   │                │ ・6桁コード入室    │
+   │ ・進行コマンド │                │ ・クラス選択       │
+   │ ・全集計表示   │                │ ・ゲーム回答       │
+   └──────────────┘                └────────────────────┘
 ```
 
 ---
 
 ## 3. 技術スタック
 
-### 3.1 フロントエンド
+### 3.1 サーバー（Cloudflare Workers）
 
 | 項目 | 選定 | 理由 |
 |---|---|---|
-| 言語 | TypeScript | 型安全・保守性 |
-| フレームワーク | React 18 | エコシステム・SPA構築の容易さ |
-| ビルドツール | Vite | 高速・軽量バンドル |
-| スタイル | Tailwind CSS | クラスベース・追加CSSが軽い |
-| ルーティング | React Router | /teacher と /student の分離 |
-| 状態管理 | React Context | 軽量・追加依存なし |
-| QRコード | qrcode.react | 軽量・依存少 |
-| アイコン | lucide-react | 軽量SVGアイコン |
+| 実行環境 | Cloudflare Workers (Paid $5/月) | エッジ実行、WebSocket対応、Durable Objects必須 |
+| 状態管理 | Durable Objects | 1ルーム=1インスタンスで状態保持 |
+| WebSocket | Hibernation API | アイドル時のコスト削減 |
+| デプロイ | wrangler | CLIで `wrangler deploy` |
+| DB | **なし** | 揮発のみ、個人情報非保存方針 |
+| ドメイン | `*.workers.dev` | 独自ドメイン不要、無料 |
 
-### 3.2 永続化
+### 3.2 フロントエンド
 
-| 項目 | 選定 | 用途 |
+| 項目 | 選定 | 理由 |
 |---|---|---|
-| localStorage | 標準API | 生徒の回答・診断結果 |
-| sessionStorage | 標準API | 講師のタイマー状態 |
+| 言語 | TypeScript | 型安全 |
+| フレームワーク | React 18 | 既存採用 |
+| ビルドツール | Vite | 既存採用 |
+| スタイル | Tailwind CSS | 既存採用 |
+| ルーティング | React Router (HashRouter) | 既存採用 |
+| 状態管理 | React Context | 既存 + 同期state追加 |
+| QRコード | qrcode.react | 既存 |
+| グラフ | recharts または自前SVG | レーダー・棒グラフ用 |
 
-### 3.3 配信
+### 3.3 永続化（クライアント）
 
-| 項目 | 選定 |
+| 項目 | 用途 |
 |---|---|
-| CI/CD | GitHub Actions |
-| ホスティング | GitHub Pages（第一候補） |
-| ドメイン | 必要に応じてカスタムドメイン |
+| localStorage | 個人の診断結果、My Quest Card（ローカルフォールバック用） |
+| sessionStorage | 講師タイマー、ルームコード（再接続用） |
 
 ---
 
-## 4. ディレクトリ構成（予定）
+## 4. ディレクトリ構成
 
 ```
 rune-carrer5/
 ├── README.md
-├── package.json
+├── package.json                # client + worker scripts
+├── wrangler.toml               # Cloudflare Workers設定
 ├── vite.config.ts
-├── tsconfig.json
+├── tsconfig.json               # references all
+├── tsconfig.app.json           # client
+├── tsconfig.worker.json        # worker
+├── tsconfig.node.json          # vite
 ├── tailwind.config.js
+├── postcss.config.js
 ├── index.html
-├── public/
-│   └── (静的アセット最小限)
-├── src/
+├── src/                        # クライアント
 │   ├── main.tsx
 │   ├── App.tsx
 │   ├── routes/
-│   │   ├── TeacherRoute.tsx       # 講師モード
-│   │   ├── StudentRoute.tsx       # 生徒モード
-│   │   └── HomeRoute.tsx          # 入口
 │   ├── stages/
-│   │   ├── Stage0Start.tsx
-│   │   ├── Stage1MiniGame.tsx
-│   │   ├── Stage2Result.tsx
-│   │   ├── Stage3Share.tsx
-│   │   ├── Stage4Reveal.tsx
-│   │   ├── Stage5SkillLink.tsx
-│   │   └── Stage6MyQuest.tsx
+│   ├── games/                  # 7ミニゲームコンポーネント
 │   ├── components/
-│   │   ├── teacher/
-│   │   │   ├── Timer.tsx
-│   │   │   ├── StageNav.tsx
-│   │   │   ├── QRDisplay.tsx
-│   │   │   └── FallbackPanel.tsx
-│   │   ├── student/
-│   │   │   ├── MiniGameCard.tsx
-│   │   │   ├── ResultCard.tsx
-│   │   │   └── QuestCard.tsx
-│   │   └── common/
-│   │       ├── Button.tsx
-│   │       └── Layout.tsx
 │   ├── content/
-│   │   ├── miniGames.ts           # ミニゲームの問題定義
-│   │   ├── stages.ts              # Stage進行データ
-│   │   ├── skillLinks.ts          # ゲームスキル接続マップ
-│   │   └── messages.ts            # 表示文言
 │   ├── lib/
-│   │   ├── storage.ts             # localStorage管理
-│   │   ├── scoring.ts             # タイプ判定ロジック
-│   │   └── timer.ts               # タイマーロジック
+│   │   ├── storage.ts
+│   │   ├── scoring.ts
+│   │   ├── timer.ts
+│   │   └── sync.ts             # WebSocketクライアント
 │   ├── types/
-│   │   └── index.ts
 │   └── styles/
-│       └── globals.css
+├── shared/
+│   └── protocol.ts             # クライアント・サーバー共有メッセージ型
+├── worker/                     # Cloudflare Workers
+│   ├── index.ts                # Worker entry
+│   ├── RoomDO.ts               # Durable Object
+│   ├── state.ts                # 状態機械ロジック
+│   └── tsconfig.json
 ├── docs/
-│   ├── REQUIREMENTS.md
-│   ├── ARCHITECTURE.md
-│   ├── STAGES.md
-│   ├── DEVELOPMENT_PLAN.md
-│   ├── PROGRESS.md
-│   └── ERROR_LOG.md
-└── .github/
-    └── workflows/
-        └── deploy.yml
+└── .github/workflows/
 ```
 
 ---
 
-## 5. データフロー
+## 5. ルーム状態モデル
 
-### 5.1 生徒回答フロー
-
-```
-[生徒画面]
-   ↓ ボタン押下
-[Reactイベントハンドラ]
-   ↓ 回答を state に追加
-[localStorage保存]
-   ↓ Stage1完了時
-[scoring.ts でタイプ判定]
-   ↓ Stage2へ遷移
-[強みの芽表示]
-   ↓ Stage6 で
-[QuestCard 生成・表示]
-```
-
-### 5.2 講師進行フロー
+### 5.1 フェーズ機械
 
 ```
-[講師画面]
-   ↓ 開始ボタン
-[全体タイマー開始 / sessionStorage]
-   ↓ 自動的にStage切替（推奨時間で通知）
-[次へ/戻るボタンで手動進行も可]
-   ↓ 各Stageで
-[QR表示 / 問い表示 / 講師メモ表示]
+   [lobby] ──teacher: startGame──▶ [intro: 3-2-1 countdown]
+      ▲                                  │
+      │                                  ▼
+      │                           [active: 生徒回答]
+      │                                  │
+      │                          (時間切れ or 全員回答)
+      │                                  ▼
+      │ ◀──teacher: nextGame──── [results: 集計表示]
+      │                                  │
+      │              teacher: endStage   │
+      │ ◀────────────────────────────────┤
+      │                                  ▼
+      │                         [stage_summary]
+      │                                  │
+      └──teacher: nextStage───────────────┘
+
+      teacher: closeRoom ──▶ [closed]
 ```
 
-### 5.3 リアルタイム同期について
-**初期版では実装しない**。
-講師画面と生徒画面は独立して進行する。生徒の進捗は講師画面に反映されない。
-これにより、サーバー処理・WebSocket接続を不要とし、300名規模に耐える。
+### 5.2 RoomDO の状態（メモリ）
+
+```ts
+interface RoomState {
+  code: string;                 // 6桁ルームコード
+  classes: string[];            // ["梅田大", "梅田小", "名古屋"]
+  phase: 'lobby' | 'intro' | 'active' | 'results' | 'stage_summary' | 'closed';
+  currentStage: number;         // 0..6
+  currentGameIndex: number | null; // Stage1の0..6
+  introCountdownAt: number | null; // タイムスタンプ
+  activeStartedAt: number | null;
+  activeDurationMs: number | null;
+  students: Map<string, StudentInfo>; // sid → info
+  responses: Map<string, Map<string, AnswerPayload>>; // gameId → (sid → answer)
+  reactions: ReactionLog[];     // 直近のリアクション（揮発・10秒）
+}
+
+interface StudentInfo {
+  sid: string;                  // 匿名ID（Workerが付与）
+  className: string;
+  joinedAt: number;
+  lastSeenAt: number;
+}
+```
+
+### 5.3 個人情報を保存しないルール
+- `sid` は Worker が発行する匿名 UUID。氏名・端末ID等は使わない
+- localStorage に保持されるのは sid と className とローカル回答のみ
+- DO のメモリは授業終了で破棄（Durable Object は明示破棄しない場合も最大数日でアイドル消失）
 
 ---
 
-## 6. パフォーマンス設計
+## 6. 通信プロトコル
 
-### 6.1 バンドルサイズ目標
+`shared/protocol.ts` に集約。
 
-| 項目 | 目標 |
+### 6.1 Client → Server
+
+| type | payload | 送信元 |
+|---|---|---|
+| `T_CREATE_ROOM` | `{ classes: string[] }` | 講師 |
+| `T_START_GAME` | `{ gameId: string, durationMs: number }` | 講師 |
+| `T_END_GAME` | `{}` | 講師 |
+| `T_NEXT_GAME` | `{}` | 講師 |
+| `T_SKIP_GAME` | `{ gameId: string }` | 講師 |
+| `T_END_STAGE` | `{}` | 講師 |
+| `T_NEXT_STAGE` | `{}` | 講師 |
+| `T_CLOSE_ROOM` | `{}` | 講師 |
+| `S_JOIN` | `{ code: string, className: string, sid?: string }` | 生徒 |
+| `S_ANSWER` | `{ gameId: string, payload: any }` | 生徒 |
+| `S_RETRY` | `{ gameId: string }` | 生徒（再挑戦、集計には反映しない） |
+| `REACTION` | `{ emoji: string }` | 講師/生徒 |
+| `PING` | `{}` | 両方 |
+
+### 6.2 Server → Client
+
+| type | payload | 用途 |
+|---|---|---|
+| `ROOM_CREATED` | `{ code: string, teacherToken: string }` | 講師にコード返却 |
+| `JOINED` | `{ sid: string, state: RoomState }` | 生徒入室成功 |
+| `STATE` | `{ state: RoomState }` | フル状態同期 |
+| `PHASE_CHANGE` | `{ phase, currentGameIndex, ...}` | フェーズ遷移通知 |
+| `PROGRESS` | `{ gameId, count, total, perClass }` | 回答進捗 |
+| `AGGREGATION` | `{ gameId, perClass, overall }` | 結果集計 |
+| `STAGE_SUMMARY` | `{ overall, perClass }` | Stage終了集計 |
+| `REACTION_BURST` | `{ emoji, ts }` | リアクション拡散 |
+| `STUDENT_COUNT` | `{ count, perClass }` | 入室人数更新 |
+| `ERROR` | `{ code, message }` | エラー |
+| `PONG` | `{}` | ping応答 |
+
+すべて JSON。WebSocket フレーム1つに1メッセージ。
+
+---
+
+## 7. 認可モデル
+
+- **講師トークン**：ルーム作成時に1回だけ発行、`sessionStorage`に保管。以後の `T_*` メッセージに同梱
+- **生徒sid**：入室時に発行、再接続時はsidを使ってstate復旧
+- ルームコードは「入室の鍵」、講師トークンは「進行操作の鍵」
+
+---
+
+## 8. パフォーマンス設計
+
+### 8.1 1ルーム300人での負荷見積
+
+| 項目 | 試算 |
 |---|---|
-| 初回JS（gzip） | < 150KB |
-| 初回CSS（gzip） | < 20KB |
-| 画像合計 | < 200KB |
-| 初回ロード時間（4G） | < 3秒 |
+| WebSocket接続 | 300同時、1 Durable Object内 |
+| メッセージ流量 | 平均10msg/sec/ルーム（回答+リアクション+ping） |
+| 1メッセージサイズ | <1KB |
+| Durable Object メモリ | <1MB |
+| Workers リクエスト | 月数千〜数万、Paid枠で十分 |
 
-### 6.2 最適化方針
-- 画像はSVG優先、ラスタはWebP
-- 動画は使用しない（または極小プレビュー）
-- コード分割：ルート単位（teacher / student）
-- フォントはシステムフォント中心
-- Service Workerで2回目以降オフライン化（後期検討）
+### 8.2 WebSocket Hibernation
+- アイドル時はDOがhibernateし、課金されない
+- 復帰時にWebSocket状態は維持
 
-### 6.3 300名同時アクセス耐性
-- 静的配信のため、CDN配信能力に依存
-- 各クライアントが独立処理 → サーバーボトルネックなし
-- localStorage使用 → サーバー保存処理ゼロ
+### 8.3 失敗時のフォールバック
+- WebSocket接続失敗 → 「ローカルモード」に切替表示
+- 生徒は自分のペースで進める（既存実装）
+- 講師は別途口頭進行
 
 ---
 
-## 7. セキュリティ設計
+## 9. セキュリティ・プライバシー
 
 | 項目 | 方針 |
 |---|---|
-| 個人情報 | 一切収集しない |
-| 認証 | なし（不要） |
-| HTTPS | 配信プラットフォームで強制 |
-| XSS対策 | Reactの自動エスケープに依存 |
-| 外部送信 | localStorage以外への永続化なし |
+| 個人情報 | 氏名・学籍番号・端末識別子を一切収集しない |
+| 認証 | 講師トークン（短命、sessionStorage） + 生徒sid（匿名） |
+| HTTPS / WSS | Cloudflareが自動付与 |
+| XSS対策 | Reactの自動エスケープ |
+| 永続DB | なし |
 | Cookie | 使用しない |
-| 解析タグ | 初期版では入れない |
 
 ---
 
-## 8. ブラウザサポート
+## 10. デプロイ
 
-| ブラウザ | 対象 |
+### 10.1 ビルド〜デプロイ
+```bash
+npm run build              # client → dist/
+npx wrangler deploy        # worker + dist/ を一括デプロイ
+```
+
+### 10.2 GitHub Actions
+- main pushで自動デプロイ
+- secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+
+### 10.3 環境
+- **dev**: ローカルで `wrangler dev`
+- **prod**: `*.workers.dev`
+
+---
+
+## 11. 既知のトレードオフ
+
+| トレードオフ | 採用判断 |
 |---|---|
-| iOS Safari | 直近2バージョン |
-| Android Chrome | 直近2バージョン |
-| Desktop Chrome / Edge / Firefox | 最新 |
-| IE11 | 非対応 |
+| 自前バックエンドが増える | Workers Paid $5/月で許容 |
+| Hibernation使用でコールドスタートあり | 数百ms、許容 |
+| Durable Objects はリージョン固定 | 単一教室前提なので問題なし |
+| WebSocket断時の再接続実装が必要 | sid再利用で復帰可能 |
 
 ---
 
-## 9. 環境変数
-
-初期版では機密情報を扱わないため、環境変数は最小限。
-
-| 変数 | 用途 |
-|---|---|
-| `VITE_BASE_URL` | デプロイ先のベースURL（QR生成用） |
-| `VITE_APP_VERSION` | リリースバージョン表示 |
-
----
-
-## 10. デプロイ戦略
-
-### 10.1 ブランチ運用
-- `main`：本番反映
-- `claude/kahoot-independent-design-CRd6X`：開発ブランチ
-- フィーチャーブランチ：必要に応じて切る
-
-### 10.2 自動デプロイ
-- `main` への push をトリガーにGitHub Actionsで自動ビルド・デプロイ
-- プレビュー環境はNetlify Deploy Preview等で対応（オプション）
-
----
-
-## 11. 将来拡張ポイント
+## 12. 将来拡張ポイント
 
 | 拡張 | 検討時期 |
 |---|---|
-| Service Worker（オフライン化） | フェーズ2 |
-| リアルタイム集計（WebSocket） | フェーズ3以降 |
-| バックエンドDB | 実証で必要性が確認されたら |
-| 講師ダッシュボード | フェーズ3以降 |
-| 多授業テンプレート対応 | フェーズ3以降 |
+| D1 にクラス別傾向を匿名集計で蓄積 | Phase 3 |
+| R2 でAI画像をCDN配信 | Phase 2〜3 |
+| KV でクラス名プリセット保存 | Phase 2 |
+| 独自ドメイン切替 | 任意 |
