@@ -1,16 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { GameId } from '@shared/protocol';
 import { getMyAnswer } from '@/lib/myAnswers';
-import {
-  analyzeMyAnswer,
-  GAME_LABELS,
-  GAME_PURPOSE,
-  traitLabel,
-} from '@/content/gameAnalysis';
+import { analyzeMyAnswer, GAME_PURPOSE, traitLabel } from '@/content/gameAnalysis';
 
 interface MyAnalysisCardProps {
   gameId: GameId;
-  // ↓ Pass 3 で実際の回答が保存されるたびに更新するためのトリガ
   refreshKey?: number;
 }
 
@@ -24,10 +18,7 @@ export const MyAnalysisCard = ({ gameId, refreshKey }: MyAnalysisCardProps) => {
   if (!payload) {
     return (
       <div className="rounded-2xl bg-slate-50 border border-slate-200 p-5 text-sm text-slate-600">
-        <div className="font-semibold text-slate-700 mb-1">
-          {GAME_LABELS[gameId]} の結果はまだありません
-        </div>
-        <p>このゲームをプレイすると、ここに「あなたの傾向」が表示されます。</p>
+        このゲームの結果はまだありません。
       </div>
     );
   }
@@ -35,41 +26,113 @@ export const MyAnalysisCard = ({ gameId, refreshKey }: MyAnalysisCardProps) => {
   const a = analyzeMyAnswer(payload);
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 border border-emerald-200 p-5">
-      <div className="text-xs text-emerald-700 font-medium">
-        {GAME_LABELS[gameId]}
-      </div>
-      <div className="mt-1 text-xs text-slate-500">
-        測ったもの：{GAME_PURPOSE[gameId]}
-      </div>
+    <div className="rounded-2xl bg-white border border-emerald-200 p-5 space-y-4 shadow-sm">
+      {/* ヘッダ：適性検査風 */}
+      <header className="border-b border-slate-100 pb-3">
+        <div className="text-[11px] uppercase tracking-wider text-emerald-700 font-semibold">
+          {a.gameLabel}
+        </div>
+        <h3 className="mt-1 text-lg font-bold text-slate-900 leading-snug">
+          {a.headline}
+        </h3>
+        <div className="mt-2 inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-medium">
+          測定軸：{a.trait}
+        </div>
+      </header>
 
-      <h3 className="mt-3 text-lg font-bold text-slate-900 leading-snug">
-        {a.headline}
-      </h3>
+      {/* 数値メトリクス */}
+      {a.metrics.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {a.metrics.map((m) => (
+            <div key={m.label} className="rounded-lg bg-slate-50 px-2 py-1.5">
+              <div className="text-[10px] text-slate-500">{m.label}</div>
+              <div className="text-sm font-bold tabular-nums">{m.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <ul className="mt-3 space-y-1 text-sm text-slate-700">
-        {a.detail.map((d, i) => (
-          <li key={i}>・{d}</li>
-        ))}
-      </ul>
+      {/* サマリ */}
+      <section>
+        <div className="text-xs text-slate-500 mb-1">
+          このゲームについて：{GAME_PURPOSE[gameId]}
+        </div>
+        <p className="text-sm text-slate-800 leading-relaxed">{a.summary}</p>
+      </section>
 
+      {/* 強み */}
+      <Section title="あなたの強みとして見えたもの" items={a.strengths} bullet="✓" />
+
+      {/* 日常で現れる場面 */}
+      <Section title="この特性が日常で出る場面" items={a.realLife} bullet="・" />
+
+      {/* 向いている働き方 */}
+      <Section title="向いている働き方・場面" items={a.workStyles} bullet="▶" />
+
+      {/* 関連する仕事 */}
+      <section>
+        <div className="text-xs font-semibold text-slate-700 mb-2">
+          関連する仕事の例
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {a.careers.map((c) => (
+            <span
+              key={c}
+              className="px-2.5 py-0.5 rounded-full text-xs bg-teal-50 text-teal-800 border border-teal-200"
+            >
+              {c}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* 伸ばすには */}
+      <Section title="この力を伸ばすヒント" items={a.develop} bullet="🌱" />
+
+      {/* 上位の芽 */}
       {a.topTraits.length > 0 && (
-        <div className="mt-4">
-          <div className="text-xs text-slate-500 mb-1">今日のあなたから見えた芽</div>
+        <section>
+          <div className="text-xs font-semibold text-slate-700 mb-2">
+            今日のあなたから見えた芽
+          </div>
           <div className="flex flex-wrap gap-2">
             {a.topTraits.map((t) => (
               <span
                 key={t}
-                className="px-3 py-1 rounded-full text-xs font-semibold bg-white border border-emerald-200 text-emerald-800"
+                className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-900 border border-emerald-200"
               >
                 🌱 {traitLabel(t)}
               </span>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <p className="mt-4 text-xs text-slate-600 italic">{a.encourage}</p>
+      {/* 出典 */}
+      <footer className="border-t border-slate-100 pt-3 text-[11px] text-slate-500 leading-relaxed">
+        <div>
+          <span className="font-semibold">元ネタ：</span>
+          {a.origin}
+        </div>
+        <p className="mt-2 italic whitespace-pre-line">{a.encourage}</p>
+      </footer>
     </div>
+  );
+};
+
+const Section = ({ title, items, bullet }: { title: string; items: string[]; bullet: string }) => {
+  if (items.length === 0) return null;
+  return (
+    <section>
+      <div className="text-xs font-semibold text-slate-700 mb-1.5">{title}</div>
+      <ul className="space-y-0.5 text-sm text-slate-800">
+        {items.map((it, i) => (
+          <li key={i} className="flex gap-2">
+            <span className="text-emerald-600 select-none">{bullet}</span>
+            <span>{it}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 };
