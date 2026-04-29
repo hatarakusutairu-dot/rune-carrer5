@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { GameId } from '@shared/protocol';
+import { scoreAnswer } from '@shared/scoring';
 import { getMyAnswer } from '@/lib/myAnswers';
 import { analyzeMyAnswer, GAME_PURPOSE, traitLabel } from '@/content/gameAnalysis';
+import { RadarChart } from '@/components/common/RadarChart';
 
 interface MyAnalysisCardProps {
   gameId: GameId;
@@ -24,6 +26,7 @@ export const MyAnalysisCard = ({ gameId, refreshKey }: MyAnalysisCardProps) => {
   }
 
   const a = analyzeMyAnswer(payload);
+  const scores = scoreAnswer(payload);
 
   return (
     <div className="rounded-2xl bg-white border border-emerald-200 p-5 space-y-4 shadow-sm">
@@ -51,6 +54,11 @@ export const MyAnalysisCard = ({ gameId, refreshKey }: MyAnalysisCardProps) => {
           ))}
         </div>
       )}
+
+      {/* レーダー */}
+      <section className="flex justify-center">
+        <RadarChart scores={scores} max={10} size={240} color="emerald" label="このゲームから見えた芽の傾向" />
+      </section>
 
       {/* サマリ */}
       <section>

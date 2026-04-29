@@ -43,6 +43,13 @@ interface SyncContextValue {
   // 集計
   lastAggregation: AggregationResult | null;
   stageSummary: { perClass: PerClassAggregation[]; overall: AggregationResult['overall'] } | null;
+  // 進捗（PROGRESSメッセージから）
+  progress: {
+    gameId: string | null;
+    count: number;
+    total: number;
+    perClass: Record<string, number>;
+  };
   // リアクション
   reactionBursts: ReactionBurst[];
   // 操作
@@ -75,6 +82,12 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   );
   const [lastAggregation, setLastAggregation] = useState<AggregationResult | null>(null);
   const [stageSummary, setStageSummary] = useState<SyncContextValue['stageSummary']>(null);
+  const [progress, setProgress] = useState<SyncContextValue['progress']>({
+    gameId: null,
+    count: 0,
+    total: 0,
+    perClass: {},
+  });
   const [reactionBursts, setReactionBursts] = useState<ReactionBurst[]>([]);
   const [lastError, setLastError] = useState<SyncContextValue['lastError']>(null);
   const pendingActionRef = useRef<(() => void) | null>(null);
@@ -110,7 +123,12 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         );
         break;
       case 'PROGRESS':
-        // 進捗は別途 hook で扱う想定。State には含めない
+        setProgress({
+          gameId: msg.gameId,
+          count: msg.count,
+          total: msg.total,
+          perClass: msg.perClass,
+        });
         break;
       case 'AGGREGATION':
         setLastAggregation(msg.result);
@@ -252,6 +270,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       myClass,
       lastAggregation,
       stageSummary,
+      progress,
       reactionBursts,
       createRoom,
       resumeAsTeacher,
@@ -271,6 +290,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       myClass,
       lastAggregation,
       stageSummary,
+      progress,
       reactionBursts,
       createRoom,
       resumeAsTeacher,

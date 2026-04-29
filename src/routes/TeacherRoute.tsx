@@ -7,6 +7,10 @@ import { RoomCodeDisplay } from '@/components/teacher/RoomCodeDisplay';
 import { ClassForest } from '@/components/teacher/ClassForest';
 import { StageProgressionPanel } from '@/components/teacher/StageProgressionPanel';
 import { ReactionStream } from '@/components/teacher/ReactionStream';
+import { LiveProgress } from '@/components/teacher/LiveProgress';
+import { CharacterRace } from '@/components/teacher/CharacterRace';
+import { AggregationDisplay } from '@/components/teacher/AggregationDisplay';
+import { ClassAnalysisCard } from '@/components/teacher/ClassAnalysisCard';
 import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
 
 export const TeacherRoute = () => {
@@ -23,6 +27,7 @@ export const TeacherRoute = () => {
   }, []);
 
   const inRoom = !!(state && teacherToken && myRole === 'teacher');
+  const phase = state?.phase ?? 'lobby';
 
   return (
     <Layout title="講師モード" subtitle={inRoom ? `参加コード ${state.code}` : '60分授業の進行管理'}>
@@ -36,8 +41,34 @@ export const TeacherRoute = () => {
         <div className="grid gap-4 lg:grid-cols-3 max-w-7xl">
           <div className="lg:col-span-2 space-y-4">
             <RoomCodeDisplay code={state.code} />
+
+            {/* 進捗ライブ：active/intro時に表示 */}
+            {(phase === 'active' || phase === 'intro') && (
+              <>
+                <LiveProgress />
+                <CharacterRace />
+              </>
+            )}
+
+            {/* 集計表示：results時 */}
+            {phase === 'results' && (
+              <>
+                <ClassAnalysisCard />
+                <AggregationDisplay />
+              </>
+            )}
+
+            {/* Stage集計：stage_summary時 */}
+            {phase === 'stage_summary' && (
+              <>
+                <ClassAnalysisCard isStageSummary />
+                <AggregationDisplay isStageSummary />
+              </>
+            )}
+
             <StageProgressionPanel />
           </div>
+
           <aside className="space-y-4">
             <ClassForest
               classes={state.classes}
