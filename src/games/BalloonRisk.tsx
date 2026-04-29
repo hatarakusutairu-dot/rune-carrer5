@@ -77,7 +77,7 @@ export const BalloonRisk = ({ startedAtMs, durationMs, onComplete }: GameProps) 
 
   return (
     <GameShell
-      title="Balloon Risk（風船リスク）"
+      title="風船リスク"
       description="タップで膨らます／STOPで確定。割れたら0pt。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}

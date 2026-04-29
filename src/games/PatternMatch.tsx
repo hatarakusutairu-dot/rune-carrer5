@@ -82,7 +82,7 @@ export const PatternMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
 
   return (
     <GameShell
-      title="Pattern Match（パターン推論）"
+      title="パターン推論"
       description="次に来る図形を選んでね"
       startedAtMs={startedAtMs}
       durationMs={durationMs}

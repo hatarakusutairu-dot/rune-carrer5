@@ -16,10 +16,10 @@ export const analyzeStopSignal = (
       : '直感で動ける反応の早いタイプ';
 
   const summary = high
-    ? 'あなたは Inhibitory Control（反応抑制）が高い水準。HireVue Games と Pymetrics の Stop Signal 課題で測定される認知制御の指標で、「やめるべき時に止まれる」自己制御の強さを示します。安全管理や精密作業で力を発揮します。'
+    ? 'あなたは「やめるべき時に止まる力（反応抑制）」が高い水準。海外大手の採用検査でも測定される認知制御の指標で、自己制御の強さを示します。安全管理や精密作業で力を発揮します。'
     : mid
-      ? 'あなたは反応抑制と反応速度のバランスが取れているタイプ。Inhibitory Control は標準的で、スピードと正確性を場面に応じて調整できます。'
-      : 'あなたは Reaction Speed（反応速度）が前面に出るタイプ。Inhibitory Control は控えめでも、瞬発的な判断が求められる場面では強みになります。eスポーツ・スポーツ・接客などで力を発揮します。';
+      ? 'あなたは反応抑制と反応速度のバランスが取れているタイプ。標準的な水準で、スピードと正確性を場面に応じて調整できます。'
+      : 'あなたは反応速度が前面に出るタイプ。反応抑制は控えめでも、瞬発的な判断が求められる場面では強みになります。eスポーツ・スポーツ・接客などで力を発揮します。';
 
   const strengths = high
     ? ['誘惑に流されない', '長時間の集中を保てる', '危険を避ける感度が高い']
@@ -56,9 +56,9 @@ export const analyzeStopSignal = (
         ];
 
   return {
-    gameLabel: 'Stop Signal（反応抑制課題）',
-    origin: 'HireVue Games の Reaction & Inhibition 課題、Pymetrics の Stop Signal Task。神経心理学で標準的な認知制御テスト',
-    trait: 'Inhibitory Control（反応抑制）',
+    gameLabel: '反応抑制（信号）課題',
+    origin: '神経心理学で標準的な認知制御テストで、海外大手の採用検査にも取り入れられている指標です。',
+    trait: '反応抑制（やめるべき時に止まる力）',
     headline,
     summary,
     strengths,

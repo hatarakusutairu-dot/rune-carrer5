@@ -71,7 +71,7 @@ export const EmotionMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
 
   return (
     <GameShell
-      title="Emotion Match（感情認識）"
+      title="表情から気持ちを読む"
       description="この表情はどの感情？"
       startedAtMs={startedAtMs}
       durationMs={durationMs}

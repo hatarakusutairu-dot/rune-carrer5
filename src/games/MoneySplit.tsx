@@ -44,7 +44,7 @@ export const MoneySplit = ({ startedAtMs, durationMs, onComplete }: GameProps) =
 
   return (
     <GameShell
-      title="Money Split（コイン分配）"
+      title="コイン分配"
       description="10コインを自分と相手でどう分ける？"
       startedAtMs={startedAtMs}
       durationMs={durationMs}

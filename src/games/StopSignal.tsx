@@ -80,7 +80,7 @@ export const StopSignal = ({ startedAtMs, durationMs, onComplete }: GameProps) =
 
   return (
     <GameShell
-      title="Stop Signal（信号反応）"
+      title="信号反応"
       description="緑が出たら即タップ。赤は押さない。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}

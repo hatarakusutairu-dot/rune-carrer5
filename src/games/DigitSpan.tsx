@@ -84,7 +84,7 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
 
   return (
     <GameShell
-      title="Digit Span（数字記憶）"
+      title="数字記憶"
       description="数字を覚えて入力。覚えた桁数までチャレンジ。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}

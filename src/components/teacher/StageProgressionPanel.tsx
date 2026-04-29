@@ -14,13 +14,13 @@ const STAGE_TITLES = [
 ];
 
 const GAME_LABELS: Record<GameId, string> = {
-  balloon: 'Balloon Risk（風船）',
-  digit_span: 'Digit Span（数字記憶）',
-  card_decks: 'Card Decks（カード山）',
-  emotion_match: 'Emotion Match（感情）',
-  money_split: 'Money Split（コイン分配）',
-  stop_signal: 'Stop Signal（信号反応）',
-  pattern_match: 'Pattern Match（パターン）',
+  balloon: '風船リスク（リスク許容度）',
+  digit_span: '数字記憶（作業記憶）',
+  card_decks: 'カード山引き（意思決定）',
+  emotion_match: '表情から気持ちを読む（感情認識）',
+  money_split: 'コイン分配（社会的選好）',
+  stop_signal: '信号反応（反応抑制）',
+  pattern_match: 'パターン推論（規則性発見）',
 };
 
 const phaseLabel = (phase: Phase): string => {

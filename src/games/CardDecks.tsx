@@ -3,7 +3,7 @@ import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
 
-// Iowa Gambling Task 風：4つのデッキにそれぞれ報酬と罰金分布
+// 山引き課題：4つのデッキにそれぞれ報酬と罰金の分布が違う
 // A,B：高報酬・高罰金（不利） / C,D：低報酬・低罰金（有利）
 const DECKS = [
   { name: 'A', reward: 12, punishMean: -25, punishProb: 0.5 }, // 期待値マイナス
@@ -57,7 +57,7 @@ export const CardDecks = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
 
   return (
     <GameShell
-      title="Card Decks（カード山）"
+      title="カード山引き"
       description="4つの山から好きな山を引く。当たり外れの傾向を見つけよう。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}

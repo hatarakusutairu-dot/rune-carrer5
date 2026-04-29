@@ -1,7 +1,7 @@
 // 採用ゲーム7種それぞれの「個人向け分析テキスト」
-// 採用現場の認知科学アセスメント（Pymetrics / HireVue Games / Arctic Shores）を
-// 元ネタとして、後から見ても納得できる適性検査風の説明にする。
-// 全タイプ肯定、断定・優劣・採点なし。
+// 海外の認知科学系の採用アセスメント（風船リスク／作業記憶／意思決定／感情認識／
+// 社会的選好／反応抑制／パターン推論）を元ネタに、後から見ても納得できる
+// 適性検査風の説明にする。全タイプ肯定、断定・優劣・採点なし。
 
 import type { AnswerPayload, GameId, SeedType } from '@shared/protocol';
 import { analyzeBalloon } from './analysis/balloon';
@@ -16,7 +16,7 @@ export interface PersonalAnalysis {
   // メタ
   gameLabel: string;
   origin: string;            // 元ネタとなる採用アセスメント
-  trait: string;             // 測定軸の専門名（例: Risk Tolerance）
+  trait: string;             // 測定軸の名称（日本語）
   // タイトル
   headline: string;
   // 解析
@@ -43,13 +43,13 @@ const TRAIT_LABEL: Record<SeedType, string> = {
 export const traitLabel = (t: SeedType): string => TRAIT_LABEL[t];
 
 export const GAME_LABELS: Record<GameId, string> = {
-  balloon: 'Balloon Risk（風船リスク課題）',
-  digit_span: 'Digit Span（作業記憶課題）',
-  card_decks: 'Card Decks（意思決定課題）',
-  emotion_match: 'Emotion Match（感情認識課題）',
-  money_split: 'Money Split（社会的選好課題）',
-  stop_signal: 'Stop Signal（反応抑制課題）',
-  pattern_match: 'Pattern Match（パターン推論課題）',
+  balloon: '風船リスク課題',
+  digit_span: '数字記憶課題',
+  card_decks: '意思決定の山引き課題',
+  emotion_match: '表情から気持ちを読む課題',
+  money_split: 'コイン分配の選好課題',
+  stop_signal: '反応抑制（信号）課題',
+  pattern_match: 'パターン推論課題',
 };
 
 export const GAME_PURPOSE: Record<GameId, string> = {
