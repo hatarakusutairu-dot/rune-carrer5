@@ -3,7 +3,7 @@ import type { GameId } from '@shared/protocol';
 import { useSync } from '@/contexts/SyncContext';
 import { ReactionBar } from '@/components/common/ReactionBar';
 import { MyAnalysisCard } from '@/components/student/MyAnalysisCard';
-import { GAME_LABELS } from '@/content/gameAnalysis';
+import { GameContainer } from '@/games/GameContainer';
 import { getMyAnswer } from '@/lib/myAnswers';
 
 const Countdown = ({ targetMs }: { targetMs: number }) => {
@@ -64,15 +64,13 @@ export const StudentPhaseBoard = () => {
           <Countdown targetMs={introCountdownAt} />
         )}
 
-        {phase === 'active' && currentGameId && !myAnswerForCurrent && (
-          <div className="mt-6 text-center">
-            <div className="text-xs text-slate-500">いま挑戦中</div>
-            <div className="mt-1 text-xl font-bold">
-              {GAME_LABELS[currentGameId as GameId]}
-            </div>
-            <div className="mt-6 text-sm text-slate-600 italic">
-              （ゲーム本体は Pass 3 で実装予定）
-            </div>
+        {phase === 'active' && currentGameId && !myAnswerForCurrent && state.activeStartedAt && (
+          <div className="mt-2 -mx-2 sm:mx-0">
+            <GameContainer
+              gameId={currentGameId as GameId}
+              startedAtMs={state.activeStartedAt}
+              durationMs={state.activeDurationMs ?? 90_000}
+            />
           </div>
         )}
 
