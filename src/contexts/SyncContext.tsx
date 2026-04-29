@@ -17,6 +17,7 @@ import type {
   ServerMsg,
 } from '@shared/protocol';
 import { ConnState, SyncClient, buildSyncUrl } from '@/lib/sync';
+import { clearMyAnswers } from '@/lib/myAnswers';
 
 const TEACHER_TOKEN_KEY = 'rune-carrer5:teacher-token';
 const TEACHER_ROOM_KEY = 'rune-carrer5:teacher-room';
@@ -222,6 +223,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.removeItem(STUDENT_SID_KEY);
     sessionStorage.removeItem(STUDENT_ROOM_KEY);
     sessionStorage.removeItem(STUDENT_CLASS_KEY);
+    clearMyAnswers();
   }, []);
 
   useEffect(() => {

@@ -2,16 +2,9 @@ import { useEffect, useState } from 'react';
 import type { GameId } from '@shared/protocol';
 import { useSync } from '@/contexts/SyncContext';
 import { ReactionBar } from '@/components/common/ReactionBar';
-
-const GAME_LABELS: Record<GameId, string> = {
-  balloon: 'Balloon Risk（風船）',
-  digit_span: 'Digit Span（数字記憶）',
-  card_decks: 'Card Decks（カード山）',
-  emotion_match: 'Emotion Match（感情）',
-  money_split: 'Money Split（コイン分配）',
-  stop_signal: 'Stop Signal（信号反応）',
-  pattern_match: 'Pattern Match（パターン）',
-};
+import { MyAnalysisCard } from '@/components/student/MyAnalysisCard';
+import { GAME_LABELS } from '@/content/gameAnalysis';
+import { getMyAnswer } from '@/lib/myAnswers';
 
 const Countdown = ({ targetMs }: { targetMs: number }) => {
   const [now, setNow] = useState(Date.now());
@@ -32,9 +25,22 @@ const Countdown = ({ targetMs }: { targetMs: number }) => {
 
 export const StudentPhaseBoard = () => {
   const { state, myClass } = useSync();
+  // 回答済みかどうかは、自分のlocalStorageを参照
+  // Pass 3でゲーム実装時に saveMyAnswer が呼ばれて反映される
+  const [answeredKey, setAnsweredKey] = useState(0);
+
+  // ゲーム切替で再評価
+  useEffect(() => {
+    setAnsweredKey((k) => k + 1);
+  }, [state?.currentGameId, state?.phase]);
+
   if (!state) return null;
 
   const { phase, currentGameId, introCountdownAt } = state;
+  const myAnswerForCurrent =
+    currentGameId ? getMyAnswer(currentGameId as GameId) : null;
+  const showAnalysis =
+    !!currentGameId && (phase === 'active' || phase === 'results') && !!myAnswerForCurrent;
 
   return (
     <div className="max-w-md">
@@ -58,23 +64,44 @@ export const StudentPhaseBoard = () => {
           <Countdown targetMs={introCountdownAt} />
         )}
 
-        {phase === 'active' && currentGameId && (
+        {phase === 'active' && currentGameId && !myAnswerForCurrent && (
           <div className="mt-6 text-center">
             <div className="text-xs text-slate-500">いま挑戦中</div>
-            <div className="mt-1 text-xl font-bold">{GAME_LABELS[currentGameId]}</div>
+            <div className="mt-1 text-xl font-bold">
+              {GAME_LABELS[currentGameId as GameId]}
+            </div>
             <div className="mt-6 text-sm text-slate-600 italic">
               （ゲーム本体は Pass 3 で実装予定）
             </div>
           </div>
         )}
 
-        {phase === 'results' && (
-          <div className="mt-8 text-center">
-            <div className="text-6xl">🎉</div>
-            <p className="mt-4 text-lg font-bold">先生の画面で結果を見よう</p>
-            <p className="mt-2 text-sm text-slate-600">
-              次のゲームの開始まで、リアクションで盛り上げよう！
+        {phase === 'active' && currentGameId && myAnswerForCurrent && (
+          <div className="mt-4 text-center">
+            <div className="text-3xl">✅</div>
+            <p className="mt-2 text-sm font-bold">回答完了！</p>
+            <p className="text-xs text-slate-600">
+              他のクラスメイトを待っています
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              下に「あなたの結果」を出しています
+            </p>
+          </div>
+        )}
+
+        {phase === 'results' && (
+          <div className="mt-6 text-center">
+            <div className="text-5xl">🎉</div>
+            <p className="mt-3 text-lg font-bold">先生の画面でクラス傾向を発表中</p>
+            {currentGameId && myAnswerForCurrent ? (
+              <p className="mt-1 text-xs text-slate-500">
+                下にあなた個人の結果を表示しています
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-500">
+                次のゲームの開始まで、リアクションで盛り上げよう
+              </p>
+            )}
           </div>
         )}
 
@@ -95,6 +122,12 @@ export const StudentPhaseBoard = () => {
           </div>
         )}
       </div>
+
+      {showAnalysis && currentGameId && (
+        <div className="mt-3">
+          <MyAnalysisCard gameId={currentGameId as GameId} refreshKey={answeredKey} />
+        </div>
+      )}
 
       <div className="mt-3">
         <ReactionBar />
