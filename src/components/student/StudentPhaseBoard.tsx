@@ -4,24 +4,9 @@ import { useSync } from '@/contexts/SyncContext';
 import { ReactionBar } from '@/components/common/ReactionBar';
 import { MyAnalysisCard } from '@/components/student/MyAnalysisCard';
 import { GameContainer } from '@/games/GameContainer';
+import { CountdownBig } from '@/components/common/CountdownBig';
+import { WaitingScene } from '@/components/student/WaitingScene';
 import { getMyAnswer } from '@/lib/myAnswers';
-
-const Countdown = ({ targetMs }: { targetMs: number }) => {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 100);
-    return () => clearInterval(t);
-  }, []);
-  const remain = Math.max(0, Math.ceil((targetMs + 3000 - now) / 1000));
-  return (
-    <div className="text-center py-12">
-      <div className="text-9xl font-black text-teal-600 animate-pulse tabular-nums">
-        {remain || 'GO!'}
-      </div>
-      <p className="mt-4 text-slate-700">準備して…</p>
-    </div>
-  );
-};
 
 export const StudentPhaseBoard = () => {
   const { state, myClass } = useSync();
@@ -61,7 +46,7 @@ export const StudentPhaseBoard = () => {
         )}
 
         {phase === 'intro' && introCountdownAt !== null && (
-          <Countdown targetMs={introCountdownAt} />
+          <CountdownBig introStartedAtMs={introCountdownAt} />
         )}
 
         {phase === 'active' && currentGameId && !myAnswerForCurrent && state.activeStartedAt && (
@@ -75,29 +60,24 @@ export const StudentPhaseBoard = () => {
         )}
 
         {phase === 'active' && currentGameId && myAnswerForCurrent && (
-          <div className="mt-4 text-center">
-            <div className="text-3xl">✅</div>
-            <p className="mt-2 text-sm font-bold">回答完了！</p>
-            <p className="text-xs text-slate-600">
-              他のクラスメイトを待っています
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
+          <div className="mt-3">
+            <WaitingScene variant="answered" />
+            <p className="mt-2 text-xs text-slate-500 text-center">
               下に「あなたの結果」を出しています
             </p>
           </div>
         )}
 
         {phase === 'results' && (
-          <div className="mt-6 text-center">
-            <div className="text-5xl">🎉</div>
-            <p className="mt-3 text-lg font-bold">先生の画面でクラス傾向を発表中</p>
+          <div className="mt-3">
+            <WaitingScene variant="results" />
             {currentGameId && myAnswerForCurrent ? (
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-500 text-center">
                 下にあなた個人の結果を表示しています
               </p>
             ) : (
-              <p className="mt-1 text-xs text-slate-500">
-                次のゲームの開始まで、リアクションで盛り上げよう
+              <p className="mt-2 text-xs text-slate-500 text-center">
+                次のゲームまで、リアクションで盛り上げよう
               </p>
             )}
           </div>

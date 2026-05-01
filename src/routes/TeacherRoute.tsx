@@ -11,6 +11,8 @@ import { LiveProgress } from '@/components/teacher/LiveProgress';
 import { CharacterRace } from '@/components/teacher/CharacterRace';
 import { AggregationDisplay } from '@/components/teacher/AggregationDisplay';
 import { ClassAnalysisCard } from '@/components/teacher/ClassAnalysisCard';
+import { GameResultBurst } from '@/components/teacher/GameResultBurst';
+import { CountdownBig } from '@/components/common/CountdownBig';
 import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
 
 export const TeacherRoute = () => {
@@ -42,8 +44,15 @@ export const TeacherRoute = () => {
           <div className="lg:col-span-2 space-y-4">
             <RoomCodeDisplay code={state.code} />
 
-            {/* 進捗ライブ：active/intro時に表示 */}
-            {(phase === 'active' || phase === 'intro') && (
+            {/* intro時：カウントダウン大表示 */}
+            {phase === 'intro' && state.introCountdownAt !== null && (
+              <div className="rounded-2xl bg-white border border-slate-200 p-3">
+                <CountdownBig introStartedAtMs={state.introCountdownAt} />
+              </div>
+            )}
+
+            {/* active時：進捗ライブ */}
+            {phase === 'active' && (
               <>
                 <LiveProgress />
                 <CharacterRace />
@@ -53,6 +62,9 @@ export const TeacherRoute = () => {
             {/* 集計表示：results時 */}
             {phase === 'results' && (
               <>
+                {state.currentGameId && (
+                  <GameResultBurst gameId={state.currentGameId} />
+                )}
                 <ClassAnalysisCard />
                 <AggregationDisplay />
               </>
