@@ -54,6 +54,54 @@ interface InternalState {
   classSids: Map<string, Set<string>>;
 }
 
+interface SerializedState {
+  code: string;
+  classes: string[];
+  phase: Phase;
+  currentStage: number;
+  currentGameId: GameId | null;
+  introCountdownAt: number | null;
+  activeStartedAt: number | null;
+  activeDurationMs: number | null;
+  teacherToken: string | null;
+  students: Array<[string, { className: string; joinedAt: number }]>;
+  answers: Array<[GameId, Array<[string, AnswerPayload]>]>;
+  personalScores: Array<[string, Record<SeedType, number>]>;
+  classSids: Array<[string, string[]]>;
+}
+
+const serializeState = (s: InternalState): SerializedState => ({
+  code: s.code,
+  classes: s.classes,
+  phase: s.phase,
+  currentStage: s.currentStage,
+  currentGameId: s.currentGameId,
+  introCountdownAt: s.introCountdownAt,
+  activeStartedAt: s.activeStartedAt,
+  activeDurationMs: s.activeDurationMs,
+  teacherToken: s.teacherToken,
+  students: Array.from(s.students.entries()),
+  answers: Array.from(s.answers.entries()).map(([k, v]) => [k, Array.from(v.entries())]),
+  personalScores: Array.from(s.personalScores.entries()),
+  classSids: Array.from(s.classSids.entries()).map(([k, v]) => [k, Array.from(v)]),
+});
+
+const deserializeState = (o: SerializedState): InternalState => ({
+  code: o.code,
+  classes: o.classes,
+  phase: o.phase,
+  currentStage: o.currentStage,
+  currentGameId: o.currentGameId,
+  introCountdownAt: o.introCountdownAt,
+  activeStartedAt: o.activeStartedAt,
+  activeDurationMs: o.activeDurationMs,
+  teacherToken: o.teacherToken,
+  students: new Map(o.students ?? []),
+  answers: new Map((o.answers ?? []).map(([k, v]) => [k, new Map(v)])),
+  personalScores: new Map(o.personalScores ?? []),
+  classSids: new Map((o.classSids ?? []).map(([k, v]) => [k, new Set(v)])),
+});
+
 const generateToken = (): string => {
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
@@ -70,6 +118,30 @@ export class RoomDO extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.state = this.createInitialState();
+    // Hibernation時のメモリ消失に備え、storageから復元
+    this.ctx.blockConcurrencyWhile(async () => {
+      await this.loadFromStorage();
+    });
+  }
+
+  // ─────────── 永続化 ───────────
+  private async loadFromStorage(): Promise<void> {
+    try {
+      const obj = await this.ctx.storage.get<SerializedState>('state');
+      if (obj) {
+        this.state = deserializeState(obj);
+      }
+    } catch {
+      // 失敗時は初期状態のまま
+    }
+  }
+
+  private async persist(): Promise<void> {
+    try {
+      await this.ctx.storage.put('state', serializeState(this.state));
+    } catch {
+      // ignore
+    }
   }
 
   private createInitialState(): InternalState {
@@ -118,9 +190,10 @@ export class RoomDO extends DurableObject<Env> {
     if (url.pathname === '/ws') {
       const code = url.searchParams.get('room') ?? '';
       if (!code) return new Response('Missing room', { status: 400 });
-      // 初回コネクションでコードを採用
+      // 初回コネクションでコードを採用（永続化）
       if (!this.state.code) {
         this.state.code = code;
+        await this.persist();
       } else if (this.state.code !== code) {
         return new Response('Room code mismatch', { status: 409 });
       }
@@ -148,8 +221,24 @@ export class RoomDO extends DurableObject<Env> {
     }
     try {
       await this.handleMessage(ws, msg);
+      // ステート変更が発生し得るメッセージのみ永続化
+      if (this.shouldPersist(msg.type)) {
+        await this.persist();
+      }
     } catch (e) {
       this.sendErr(ws, 'INTERNAL', String((e as Error).message ?? e));
+    }
+  }
+
+  private shouldPersist(type: ClientMsg['type']): boolean {
+    switch (type) {
+      case 'PING':
+      case 'REACTION':
+      case 'S_PEEK':
+      case 'T_RESUME':
+        return false;
+      default:
+        return true;
     }
   }
 
