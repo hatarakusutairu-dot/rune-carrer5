@@ -347,8 +347,8 @@ export class RoomDO extends DurableObject<Env> {
 
   // ─────────── Student commands ───────────
   private sPeek(ws: WebSocket, code: string): void {
-    if (!this.state.code) {
-      this.sendErr(ws, 'NO_ROOM', 'まだルームが開かれていません');
+    if (!this.state.code || !this.state.teacherToken) {
+      this.sendErr(ws, 'NO_ROOM', 'このコードのルームはまだ作られていません');
       return;
     }
     if (code !== this.state.code) {
@@ -363,8 +363,8 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   private sJoin(ws: WebSocket, code: string, className: string, sidIn?: string): void {
-    if (!this.state.code) {
-      this.sendErr(ws, 'NO_ROOM', 'まだルームが開かれていません');
+    if (!this.state.code || !this.state.teacherToken) {
+      this.sendErr(ws, 'NO_ROOM', 'このコードのルームはまだ作られていません');
       return;
     }
     if (code !== this.state.code) {
