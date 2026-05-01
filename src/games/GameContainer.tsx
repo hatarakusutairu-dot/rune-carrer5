@@ -14,9 +14,10 @@ interface GameContainerProps {
   gameId: GameId;
   startedAtMs: number;
   durationMs: number;
+  onAnswered?: () => void;
 }
 
-export const GameContainer = ({ gameId, startedAtMs, durationMs }: GameContainerProps) => {
+export const GameContainer = ({ gameId, startedAtMs, durationMs, onAnswered }: GameContainerProps) => {
   const { send } = useSync();
   const [done, setDone] = useState<boolean>(() => !!getMyAnswer(gameId));
 
@@ -28,6 +29,7 @@ export const GameContainer = ({ gameId, startedAtMs, durationMs }: GameContainer
     saveMyAnswer(gameId, payload);
     send({ type: 'S_ANSWER', gameId, payload });
     setDone(true);
+    onAnswered?.();
   };
 
   if (done) {

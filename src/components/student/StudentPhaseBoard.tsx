@@ -10,11 +10,10 @@ import { getMyAnswer } from '@/lib/myAnswers';
 
 export const StudentPhaseBoard = () => {
   const { state, myClass } = useSync();
-  // 回答済みかどうかは、自分のlocalStorageを参照
-  // Pass 3でゲーム実装時に saveMyAnswer が呼ばれて反映される
+  // 自分の回答済か（このタブの sessionStorage を参照）
   const [answeredKey, setAnsweredKey] = useState(0);
 
-  // ゲーム切替で再評価
+  // ゲーム切替・フェーズ切替で再評価
   useEffect(() => {
     setAnsweredKey((k) => k + 1);
   }, [state?.currentGameId, state?.phase]);
@@ -22,6 +21,9 @@ export const StudentPhaseBoard = () => {
   if (!state) return null;
 
   const { phase, currentGameId, introCountdownAt } = state;
+  // answeredKey に依存させて、回答完了時にも再評価
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  answeredKey;
   const myAnswerForCurrent =
     currentGameId ? getMyAnswer(currentGameId as GameId) : null;
   const showAnalysis =
@@ -55,6 +57,7 @@ export const StudentPhaseBoard = () => {
               gameId={currentGameId as GameId}
               startedAtMs={state.activeStartedAt}
               durationMs={state.activeDurationMs ?? 90_000}
+              onAnswered={() => setAnsweredKey((k) => k + 1)}
             />
           </div>
         )}
