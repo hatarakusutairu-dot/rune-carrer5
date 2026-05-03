@@ -9,9 +9,11 @@ interface Scenario {
 }
 
 const SCENARIOS: Scenario[] = [
-  { partner: '同じクラスの友達', description: 'よく一緒にいる仲のいい友達と。' },
-  { partner: '初めて同じチームになる人', description: '今日たまたま組むことになった人と。' },
-  { partner: '名前も知らない人', description: '会ったことのない知らない人と。' },
+  { partner: '仲のいい友達', description: 'よく一緒にいる気の合う友達と。' },
+  { partner: '同じ部活のメンバー', description: '同じ部・サークルだけ親しくはない人と。' },
+  { partner: '初対面のチームメイト', description: '今日たまたま組むことになった人と。' },
+  { partner: 'いつもライバルの相手', description: '張り合うことが多い相手と。' },
+  { partner: '名前も知らない人', description: '会ったこともない他校の人と。' },
 ];
 
 export const MoneySplit = ({ startedAtMs, durationMs, onComplete }: GameProps) => {

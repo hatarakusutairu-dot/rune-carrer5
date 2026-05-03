@@ -21,6 +21,7 @@ const AXIS_ORDER: SeedType[] = [
 interface RadarChartProps {
   scores: Record<SeedType, number>;
   size?: number;
+  /** 軸の最大値。未指定なら observed の 1.3倍 で自動算出 */
   max?: number;
   color?: string; // tailwind色名（例: emerald, teal, indigo）
   label?: string;
@@ -29,10 +30,13 @@ interface RadarChartProps {
 export const RadarChart = ({
   scores,
   size = 280,
-  max = 12,
+  max,
   color = 'emerald',
   label,
 }: RadarChartProps) => {
+  // max未指定時は observed の最大値の 1.3倍 ＋下限 4
+  const observed = Math.max(0, ...Object.values(scores));
+  const effectiveMax = max ?? Math.max(4, observed * 1.3);
   const cx = size / 2;
   const cy = size / 2;
   const radius = size * 0.36;
@@ -41,7 +45,7 @@ export const RadarChart = ({
 
   const point = (i: number, value: number): [number, number] => {
     const angle = (-Math.PI / 2) + (i * 2 * Math.PI) / n;
-    const r = (Math.max(0, Math.min(value, max)) / max) * radius;
+    const r = (Math.max(0, Math.min(value, effectiveMax)) / effectiveMax) * radius;
     return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
   };
 
@@ -91,7 +95,7 @@ export const RadarChart = ({
         ))}
         {/* 軸線 */}
         {axes.map((_, i) => {
-          const [x, y] = point(i, max);
+          const [x, y] = point(i, effectiveMax);
           return (
             <line
               key={i}
