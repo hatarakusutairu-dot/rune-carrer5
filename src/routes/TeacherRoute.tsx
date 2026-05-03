@@ -13,6 +13,11 @@ import { AggregationDisplay } from '@/components/teacher/AggregationDisplay';
 import { ClassAnalysisCard } from '@/components/teacher/ClassAnalysisCard';
 import { GameResultBurst } from '@/components/teacher/GameResultBurst';
 import { CountdownBig } from '@/components/common/CountdownBig';
+import { Stage0Mission } from '@/components/stages/Stage0Mission';
+import { Stage3Share } from '@/components/stages/Stage3Share';
+import { Stage4Reveal } from '@/components/stages/Stage4Reveal';
+import { Stage5SkillLink } from '@/components/stages/Stage5SkillLink';
+import { Stage6QuestCard } from '@/components/stages/Stage6QuestCard';
 import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
 
 export const TeacherRoute = () => {
@@ -30,6 +35,7 @@ export const TeacherRoute = () => {
 
   const inRoom = !!(state && teacherToken && myRole === 'teacher');
   const phase = state?.phase ?? 'lobby';
+  const stage = state?.currentStage ?? 0;
 
   return (
     <Layout title="講師モード" subtitle={inRoom ? `参加コード ${state.code}` : '60分授業の進行管理'}>
@@ -43,6 +49,15 @@ export const TeacherRoute = () => {
         <div className="grid gap-4 lg:grid-cols-3 max-w-7xl">
           <div className="lg:col-span-2 space-y-4">
             <RoomCodeDisplay code={state.code} />
+
+            {/* Stage 0：ミッション表示（lobbyフェーズ） */}
+            {phase === 'lobby' && stage === 0 && <Stage0Mission variant="teacher" />}
+
+            {/* Stage 3〜6（lobbyフェーズ） */}
+            {phase === 'lobby' && stage === 3 && <Stage3Share variant="teacher" />}
+            {phase === 'lobby' && stage === 4 && <Stage4Reveal variant="teacher" />}
+            {phase === 'lobby' && stage === 5 && <Stage5SkillLink variant="teacher" />}
+            {phase === 'lobby' && stage === 6 && <Stage6QuestCard variant="teacher" />}
 
             {/* intro時：カウントダウン大表示 */}
             {phase === 'intro' && state.introCountdownAt !== null && (

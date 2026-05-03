@@ -118,13 +118,45 @@ export const StageProgressionPanel = () => {
               variant="ghost"
               onClick={() => send({ type: 'T_END_STAGE' })}
             >
-              Stage 1 を締めて集計
+              Stage 1 を締めて Stage 2 へ
             </Button>
           </div>
         </div>
       ) : (
-        <div className="mt-4 text-sm text-slate-600">
-          このStageは Pass 4以降で詳細実装予定。現状はStage切替のみ可能。
+        <div className="mt-4 text-sm text-slate-600 space-y-2">
+          {stage === 0 && (
+            <p>「今日のミッション」を生徒画面と大画面に表示中。話し終わったら「次のStageへ」。</p>
+          )}
+          {stage === 2 && (
+            <p>
+              生徒個人のレーダーと上位タイプを表示中。
+              <br />
+              「複数の芽が見えた人もいる、それは強み」を口頭で添えてください。
+            </p>
+          )}
+          {stage === 3 && (
+            <p>
+              ペア・グループ共有の問いを表示中。
+              <br />
+              ペア2分 → グループ3分 → 数名指名で全体共有 が目安。
+            </p>
+          )}
+          {stage === 4 && (
+            <p>
+              採用ゲームの<strong>種明かし</strong>。アプリ文字より講師の口頭で熱量を込めて。
+            </p>
+          )}
+          {stage === 5 && (
+            <p>
+              ゲームでの行動 → 育つ力 → 社会で活きる場面 のマップを表示中。1〜2例を口頭で深掘り。
+            </p>
+          )}
+          {stage === 6 && (
+            <p>
+              生徒は手元で My Quest Card を作成中。<br />
+              完成後にスクショ保存を案内し、授業を締めくくる。
+            </p>
+          )}
         </div>
       )}
 
