@@ -1,25 +1,45 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
 
-const SHOW_MS = 2000;
-const STARTING_LEN = 3;
-const MAX_LEN = 9;
-const TRIALS_PER_LEN = 2; // 各桁数で2回トライ。1回でも正解で次の桁へ、2回連続失敗で終了
+// 適応式（staircase）数字記憶課題
+// - 時間制限内、何度でも挑戦
+// - 桁数 N で正解 → N+1 桁
+// - 不正解 → N-1 桁（下限あり）
+// - 表示時間は桁数に応じて（多いほど長く見せる）
+// - 自分の限界が見えるので「どこまで覚えられるか」体験になる
+
+const MIN_LEN = 3;
+const MAX_LEN = 12;
+const STARTING_LEN = 4;
+const SHOW_BASE_MS = 800;       // 1桁あたりの表示時間
+const SHOW_PER_DIGIT_MS = 350;  // 桁追加ごとに加算
+const SHOW_MAX_MS = 5000;
+const FEEDBACK_MS = 500;
 
 const generateDigits = (len: number): string => {
   let s = '';
-  for (let i = 0; i < len; i++) s += Math.floor(Math.random() * 10).toString();
+  let prev = '';
+  for (let i = 0; i < len; i++) {
+    let d = Math.floor(Math.random() * 10).toString();
+    // 同じ数字が3回連続しないよう緩く制約
+    if (i > 0 && d === prev && Math.random() < 0.5) {
+      d = ((Number(d) + 1 + Math.floor(Math.random() * 8)) % 10).toString();
+    }
+    s += d;
+    prev = d;
+  }
   return s;
 };
+
+const showMsFor = (len: number) =>
+  Math.min(SHOW_MAX_MS, SHOW_BASE_MS + len * SHOW_PER_DIGIT_MS);
 
 type Phase = 'show' | 'input' | 'feedback';
 
 export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
   const [len, setLen] = useState(STARTING_LEN);
-  const [trial, setTrial] = useState(0);
-  const [trialResults, setTrialResults] = useState<boolean[]>([]); // この桁数の結果
   const [digits, setDigits] = useState<string>(() => generateDigits(STARTING_LEN));
   const [phase, setPhase] = useState<Phase>('show');
   const [input, setInput] = useState('');
@@ -30,11 +50,12 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
   const finishedRef = useRef(false);
 
   // 表示→入力遷移
+  const showMs = useMemo(() => showMsFor(len), [len]);
   useEffect(() => {
     if (phase !== 'show') return;
-    const t = window.setTimeout(() => setPhase('input'), SHOW_MS);
+    const t = window.setTimeout(() => setPhase('input'), showMs);
     return () => clearTimeout(t);
-  }, [phase, digits]);
+  }, [phase, digits, showMs]);
 
   const finish = () => {
     if (finishedRef.current) return;
@@ -49,96 +70,63 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
     const isRight = input === digits;
     const newCorrect = correct + (isRight ? 1 : 0);
     const newTotal = total + 1;
-    const newMaxLen = isRight ? Math.max(maxLen, len) : maxLen;
-    const updatedResults = [...trialResults, isRight];
+    let newLen = len;
+    let newMaxLen = maxLen;
+    if (isRight) {
+      newMaxLen = Math.max(maxLen, len);
+      newLen = Math.min(MAX_LEN, len + 1);
+    } else {
+      newLen = Math.max(MIN_LEN, len - 1);
+    }
     setCorrect(newCorrect);
     setTotal(newTotal);
     setMaxLen(newMaxLen);
-    setTrialResults(updatedResults);
     setFeedback(isRight ? 'right' : 'wrong');
     setPhase('feedback');
 
     window.setTimeout(() => {
       setFeedback(null);
       setInput('');
-      const nextTrial = trial + 1;
-      const anyCorrect = updatedResults.some(Boolean);
-
-      // 1回正解で即次の桁へ
-      if (isRight) {
-        const nextLen = len + 1;
-        if (nextLen > MAX_LEN) {
-          finishedRef.current = true;
-          onComplete({
-            kind: 'digit_span',
-            correct: newCorrect,
-            total: newTotal,
-            maxLen: newMaxLen,
-          });
-          return;
-        }
-        setLen(nextLen);
-        setTrial(0);
-        setTrialResults([]);
-        setDigits(generateDigits(nextLen));
-        setPhase('show');
-        return;
-      }
-
-      // 不正解：2回試行できる
-      if (nextTrial >= TRIALS_PER_LEN) {
-        // 2回とも失敗 → 終了（その桁は到達せず）
-        if (!anyCorrect) {
-          finishedRef.current = true;
-          onComplete({
-            kind: 'digit_span',
-            correct: newCorrect,
-            total: newTotal,
-            maxLen: newMaxLen,
-          });
-          return;
-        }
-        // 1回成功してたなら次の桁
-        const nextLen = len + 1;
-        if (nextLen > MAX_LEN) {
-          finishedRef.current = true;
-          onComplete({
-            kind: 'digit_span',
-            correct: newCorrect,
-            total: newTotal,
-            maxLen: newMaxLen,
-          });
-          return;
-        }
-        setLen(nextLen);
-        setTrial(0);
-        setTrialResults([]);
-        setDigits(generateDigits(nextLen));
-      } else {
-        // もう1回試行
-        setTrial(nextTrial);
-        setDigits(generateDigits(len));
-      }
+      setLen(newLen);
+      setDigits(generateDigits(newLen));
       setPhase('show');
-    }, 800);
+    }, FEEDBACK_MS);
   };
 
   return (
     <GameShell
       title="数字記憶"
-      description="数字を覚えて入力。覚えた桁数までチャレンジ。"
+      description="正解で +1 桁、間違えで -1 桁。時間内に自分の限界を探そう。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}
-      progress={{ current: len, total: MAX_LEN }}
+      progress={{ current: maxLen, total: MAX_LEN }}
+      footer={
+        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="rounded-lg bg-slate-50 p-2">
+            <div className="text-slate-500">いまの桁数</div>
+            <div className="text-xl font-black tabular-nums">{len}</div>
+          </div>
+          <div className="rounded-lg bg-emerald-50 p-2">
+            <div className="text-emerald-700">最高記録</div>
+            <div className="text-xl font-black text-emerald-800 tabular-nums">{maxLen}</div>
+          </div>
+          <div className="rounded-lg bg-slate-50 p-2">
+            <div className="text-slate-500">挑戦回数</div>
+            <div className="text-xl font-black tabular-nums">{total}</div>
+          </div>
+        </div>
+      }
     >
       {phase === 'show' && (
-        <div className="py-10 text-center">
+        <div className="py-8 text-center">
           <div className="text-xs text-slate-500 mb-2">覚えてください（{len}桁）</div>
-          <div className="text-5xl font-black tracking-[0.4em] tabular-nums">{digits}</div>
+          <div className="text-5xl font-black tracking-[0.4em] tabular-nums select-none">
+            {digits}
+          </div>
         </div>
       )}
       {phase === 'input' && (
-        <div className="py-4">
+        <div className="py-3">
           <div className="text-xs text-slate-500 mb-2 text-center">
             さっきの数字を入力（{len}桁）
           </div>
@@ -160,11 +148,14 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
         </div>
       )}
       {phase === 'feedback' && (
-        <div className="py-10 text-center">
+        <div className="py-8 text-center">
           <div className={`text-6xl ${feedback === 'right' ? 'text-emerald-500' : 'text-red-500'}`}>
             {feedback === 'right' ? '◎' : '✕'}
           </div>
           <div className="mt-2 text-sm text-slate-600">正解：{digits}</div>
+          <div className="mt-1 text-xs text-slate-500">
+            {feedback === 'right' ? `次は ${Math.min(len + 1, MAX_LEN)} 桁` : `次は ${Math.max(len - 1, MIN_LEN)} 桁`}
+          </div>
         </div>
       )}
     </GameShell>

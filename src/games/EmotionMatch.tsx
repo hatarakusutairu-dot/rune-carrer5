@@ -3,17 +3,40 @@ import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
 
-// 8感情と対応する絵文字（AI画像未到着時のフォールバック）
-const EMOTIONS = [
-  { key: 'joy', label: '喜び', emoji: '😊' },
-  { key: 'sad', label: '悲しみ', emoji: '😢' },
-  { key: 'anger', label: '怒り', emoji: '😠' },
-  { key: 'surprise', label: '驚き', emoji: '😲' },
-  { key: 'fear', label: '恐れ', emoji: '😨' },
-  { key: 'curiosity', label: '好奇心', emoji: '🤔' },
-  { key: 'trust', label: '信頼', emoji: '😌' },
-  { key: 'disgust', label: '嫌悪', emoji: '😖' },
-] as const;
+// 16感情：基本8感情 + 微妙な8感情を加え、ダミーは類似ペアを優先
+// 実際の採用感情認識テストでは、似た感情を見分ける微差が重視される
+type Emotion = {
+  key: string;
+  label: string;
+  emoji: string;
+  // 紛らわしいペア（ダミー候補に優先採用）
+  similar: string[];
+};
+
+const EMOTIONS: Emotion[] = [
+  // 基本感情
+  { key: 'joy', label: '喜び', emoji: '😄', similar: ['relief', 'excitement'] },
+  { key: 'sad', label: '悲しみ', emoji: '😢', similar: ['lonely', 'disappointed'] },
+  { key: 'anger', label: '怒り', emoji: '😠', similar: ['irritated', 'contempt'] },
+  { key: 'surprise', label: '驚き', emoji: '😲', similar: ['confused', 'fear'] },
+  { key: 'fear', label: '恐れ', emoji: '😨', similar: ['anxious', 'surprise'] },
+  { key: 'disgust', label: '嫌悪', emoji: '🤢', similar: ['contempt', 'irritated'] },
+  { key: 'trust', label: '信頼', emoji: '😌', similar: ['relief', 'peaceful'] },
+  { key: 'anticipation', label: '期待', emoji: '🤩', similar: ['excitement', 'joy'] },
+
+  // 微差・採用試験で出やすい
+  { key: 'relief', label: '安堵', emoji: '😮‍💨', similar: ['joy', 'trust', 'peaceful'] },
+  { key: 'lonely', label: '寂しさ', emoji: '🥺', similar: ['sad', 'disappointed'] },
+  { key: 'irritated', label: '苛立ち', emoji: '😤', similar: ['anger', 'disgust'] },
+  { key: 'confused', label: '戸惑い', emoji: '😕', similar: ['surprise', 'anxious'] },
+  { key: 'anxious', label: '不安', emoji: '😟', similar: ['fear', 'sad', 'confused'] },
+  { key: 'contempt', label: '軽蔑', emoji: '😏', similar: ['disgust', 'anger'] },
+  { key: 'peaceful', label: '安らぎ', emoji: '😊', similar: ['trust', 'relief'] },
+  { key: 'excitement', label: '興奮', emoji: '😆', similar: ['joy', 'anticipation'] },
+  // ハードモード
+  { key: 'disappointed', label: '落胆', emoji: '😔', similar: ['sad', 'lonely'] },
+  { key: 'tense', label: '緊張', emoji: '😬', similar: ['anxious', 'fear'] },
+];
 
 const TOTAL = 12;
 
@@ -24,18 +47,20 @@ interface Q {
 }
 
 const buildQuestions = (): Q[] => {
-  // 8感情を1.5倍出すため、シャッフル＆折返しで12問つくる
-  const base = [...EMOTIONS].sort(() => Math.random() - 0.5);
-  const list: Array<(typeof EMOTIONS)[number]> = [];
-  while (list.length < TOTAL) {
-    list.push(...base);
-  }
+  const shuffled = [...EMOTIONS].sort(() => Math.random() - 0.5);
+  const list: Emotion[] = [];
+  while (list.length < TOTAL) list.push(...shuffled);
   return list.slice(0, TOTAL).map((e) => {
-    // 4択：正解 + 3個ダミー
-    const distractors = EMOTIONS.filter((x) => x.key !== e.key)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
-      .map((x) => x.label);
+    // ダミー：similarに含まれる感情を優先採用、足りなければランダム
+    const similars = EMOTIONS.filter((x) => e.similar.includes(x.key));
+    const others = EMOTIONS.filter(
+      (x) => x.key !== e.key && !e.similar.includes(x.key)
+    );
+    const pool = [
+      ...similars.sort(() => Math.random() - 0.5),
+      ...others.sort(() => Math.random() - 0.5),
+    ];
+    const distractors = pool.slice(0, 3).map((x) => x.label);
     const opts = [e.label, ...distractors].sort(() => Math.random() - 0.5);
     return { emoji: e.emoji, answer: e.label, options: opts };
   });
@@ -69,7 +94,7 @@ export const EmotionMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
       } else {
         setIdx((n) => n + 1);
       }
-    }, 600);
+    }, 700);
   };
 
   const q = questions[idx];
@@ -77,12 +102,12 @@ export const EmotionMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
   return (
     <GameShell
       title="表情から気持ちを読む"
-      description="この表情はどの感情？"
+      description="似た感情が混ざります。微妙な違いを見抜こう。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}
       progress={{ current: idx + 1, total: TOTAL }}
     >
-      <div className="flex justify-center py-4">
+      <div className="flex justify-center py-3">
         <div className="text-8xl">{q.emoji}</div>
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -107,7 +132,7 @@ export const EmotionMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
         })}
       </div>
       <p className="mt-3 text-[11px] text-slate-500 text-center">
-        AI画像配信時はここに多様な肖像イラストが表示されます（Pass 6で差し替え）
+        AI画像配信時はここに肖像イラストが表示されます
       </p>
     </GameShell>
   );

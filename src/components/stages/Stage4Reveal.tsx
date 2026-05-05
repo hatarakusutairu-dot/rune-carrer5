@@ -215,6 +215,57 @@ const AiAvatarSection = () => (
       ※ イメージ画像です。実際の AI 面接官アバターは企業ごとに違います。
     </p>
 
+    {/* 動画埋め込み枠（環境変数 VITE_AI_AVATAR_VIDEO_URL があれば表示） */}
+    <AvatarVideoEmbed />
+
+    {/* 実サービスへの外部リンク（別タブで紹介） */}
+    <div>
+      <div className="text-xs font-semibold text-slate-700 mb-2">
+        ↓ 実際のサービスを覗いてみよう（別タブで開きます）
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {[
+          {
+            name: 'SHaiN（シャイン）',
+            url: 'https://shain-ai.jp/',
+            desc: 'AIが面接官の対話型AI面接サービス（日本）',
+          },
+          {
+            name: 'HARUTAKA（ハルタカ）',
+            url: 'https://harutaka.jp/',
+            desc: '動画選考プラットフォーム（日本）',
+          },
+          {
+            name: 'インタビューメーカー',
+            url: 'https://interview-maker.jp/',
+            desc: 'オンライン面接ツール（日本）',
+          },
+          {
+            name: 'HeyGen（AI アバター生成）',
+            url: 'https://www.heygen.com/',
+            desc: '世界中で使われるAIアバター動画ツール',
+          },
+        ].map((s) => (
+          <a
+            key={s.url}
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-xl bg-white border border-violet-200 p-3 hover:border-violet-400 hover:shadow-sm transition group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="font-bold text-sm text-slate-900">{s.name}</div>
+              <span className="text-xs text-violet-600 group-hover:translate-x-0.5 transition">↗</span>
+            </div>
+            <p className="text-xs text-slate-600 mt-0.5">{s.desc}</p>
+          </a>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-slate-500 italic">
+        ※ リンク先は各社の公式サイトです。授業中に深追いはせず、雰囲気を見せる用途で。
+      </p>
+    </div>
+
     <div className="grid gap-3">
       {[
         {
@@ -258,3 +309,39 @@ const AiAvatarSection = () => (
     </div>
   </>
 );
+
+// AIアバター動画埋め込み枠
+// .env で VITE_AI_AVATAR_VIDEO_URL に YouTube 等の埋め込みURLをセットすると表示される
+// 例: https://www.youtube.com/embed/XXXXX
+const AvatarVideoEmbed = () => {
+  const url = import.meta.env.VITE_AI_AVATAR_VIDEO_URL as string | undefined;
+  if (!url) {
+    return (
+      <div className="rounded-xl bg-white border-2 border-dashed border-violet-300 p-4 text-center">
+        <div className="text-sm font-semibold text-slate-700">
+          🎥 ここにAIアバター紹介動画を表示できます
+        </div>
+        <p className="mt-1 text-xs text-slate-500 leading-relaxed">
+          .env に <code className="bg-slate-100 px-1 rounded">VITE_AI_AVATAR_VIDEO_URL</code> を
+          設定すると動画が埋め込まれます。
+          <br />
+          （例：YouTube の埋め込みURL <code>https://www.youtube.com/embed/...</code>）
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-xl overflow-hidden border-2 border-violet-300 bg-black">
+      <div className="aspect-video">
+        <iframe
+          src={url}
+          className="w-full h-full"
+          title="AI avatar"
+          frameBorder={0}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+    </div>
+  );
+};
