@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ImageWithFallback } from '../common/ImageWithFallback';
+import { AI_AVATARS } from '@/content/aiAvatars';
 
 interface Props {
   variant: 'teacher' | 'student';
@@ -285,14 +286,9 @@ const AiAvatarSection = () => (
       最近は <strong>AIが作ったアバター面接官</strong> が登場しています。
     </p>
 
-    {/* アバター枠：public/img/avatars/ai_{key}.png があれば差し替え、無ければCSS+絵文字 */}
+    {/* アバター枠：管理ページで上書き or public/img/avatars/ai_{key}.png があれば差し替え、無ければCSS+絵文字 */}
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {[
-        { key: 'a', name: 'AI 面接官 A', color: 'from-rose-200 to-orange-200', face: '🤖', tag: '優しい系' },
-        { key: 'b', name: 'AI 面接官 B', color: 'from-sky-200 to-violet-200', face: '👩‍💼', tag: '冷静系' },
-        { key: 'c', name: 'AI 面接官 C', color: 'from-emerald-200 to-cyan-200', face: '🧑‍💼', tag: '親しみ系' },
-        { key: 'd', name: 'AI 面接官 D', color: 'from-amber-200 to-pink-200', face: '👨‍💻', tag: '現場系' },
-      ].map((a) => (
+      {AI_AVATARS.map((a) => (
         <div
           key={a.name}
           className={`rounded-xl bg-gradient-to-br ${a.color} border border-white p-3 text-center shadow-sm`}

@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { AdminQuestExport } from '@/components/admin/AdminQuestExport';
 import { AdminSlides } from '@/components/admin/AdminSlides';
+import { AdminImages } from '@/components/admin/AdminImages';
+import { AdminDiagnostics } from '@/components/admin/AdminDiagnostics';
 
 export const AdminRoute = () => {
   return (
     <Layout title="管理ページ" subtitle="画像・スライド・データ管理（投影PC専用）">
-      <div className="space-y-6 max-w-4xl">
+      <div className="space-y-6 max-w-5xl">
         <NavBack />
 
         <Section title="📥 アンケート / My Quest 結果ダウンロード" tone="amber">
@@ -14,7 +16,7 @@ export const AdminRoute = () => {
         </Section>
 
         <Section title="🖼 画像管理（EmotionMatch・AIアバター）" tone="violet">
-          <Placeholder text="（次フェーズで実装：端末にアップロード→ゲーム画面で自動使用）" />
+          <AdminImages />
         </Section>
 
         <Section title="🎞 スライド管理" tone="rose">
@@ -22,7 +24,7 @@ export const AdminRoute = () => {
         </Section>
 
         <Section title="🔍 配信ファイル診断" tone="slate">
-          <Placeholder text="（次フェーズで実装：/img/ 配下の画像が配置済みか/未配置かを一覧表示）" />
+          <AdminDiagnostics />
         </Section>
 
         <p className="text-[11px] text-slate-500 italic">
@@ -40,6 +42,9 @@ const NavBack = () => (
     </Link>
     <Link to="/teacher" className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
       講師モードへ
+    </Link>
+    <Link to="/slides" className="px-3 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800">
+      スライド再生
     </Link>
   </div>
 );
@@ -64,10 +69,4 @@ const Section = ({
     <h2 className="text-lg font-bold text-slate-900">{title}</h2>
     <div className="mt-3">{children}</div>
   </section>
-);
-
-const Placeholder = ({ text }: { text: string }) => (
-  <div className="rounded-xl bg-white/70 border-2 border-dashed border-slate-300 p-6 text-center">
-    <div className="text-sm text-slate-600">{text}</div>
-  </div>
 );
