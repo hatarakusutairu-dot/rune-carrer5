@@ -59,6 +59,8 @@ export interface PublicRoomState {
   totalStudents: number;
   perClassCount: Record<string, number>;
   serverTime: number;                  // 同期用
+  // ステージ内サブステップ（Stage 5 等で使用、Stage切替で0にリセット）
+  stageStep: number;
 }
 
 export interface PerClassAggregation {
@@ -92,11 +94,14 @@ export type ClientMsg =
   | { type: 'T_SKIP_GAME'; gameId: GameId }
   | { type: 'T_END_STAGE' }
   | { type: 'T_NEXT_STAGE' }
+  | { type: 'T_NEXT_STEP' }
+  | { type: 'T_PREV_STEP' }
   | { type: 'T_CLOSE_ROOM' }
   // 生徒
   | { type: 'S_PEEK'; code: string }
   | { type: 'S_JOIN'; code: string; className: string; sid?: string }
   | { type: 'S_QUEST'; growSkill: string; gameAction: string; schoolAction: string }
+  | { type: 'S_SKILL_OPINION'; text: string }
   | { type: 'S_ANSWER'; gameId: GameId; payload: AnswerPayload }
   | { type: 'S_RETRY'; gameId: GameId }
   // 共通
@@ -142,6 +147,15 @@ export type ServerMsg =
       schoolActionCounts: Record<string, number>;
       // 匿名サンプル（最大20件）
       samples: Array<{ className: string; growSkill: string; gameAction: string; schoolAction: string }>;
+    }
+  | {
+      type: 'SKILL_OPINIONS_AGG';
+      total: number;
+      perClass: Record<string, number>;
+      // 匿名意見一覧（最大100件）
+      opinions: Array<{ className: string; text: string }>;
+      // 単語頻度（簡易ワードクラウド用）
+      wordCounts: Record<string, number>;
     }
   | { type: 'REACTION_BURST'; emoji: ReactionEmoji; ts: number }
   | { type: 'ERROR'; code: string; message: string }

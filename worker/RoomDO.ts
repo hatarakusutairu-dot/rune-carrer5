@@ -54,6 +54,10 @@ interface InternalState {
   classSids: Map<string, Set<string>>;
   // クエストカード（sid → 内容）
   questCards: Map<string, { growSkill: string; gameAction: string; schoolAction: string }>;
+  // スキル意見（sid → text）
+  skillOpinions: Map<string, string>;
+  // ステージ内サブステップ
+  stageStep: number;
 }
 
 interface SerializedState {
@@ -71,6 +75,8 @@ interface SerializedState {
   personalScores: Array<[string, Record<SeedType, number>]>;
   classSids: Array<[string, string[]]>;
   questCards: Array<[string, { growSkill: string; gameAction: string; schoolAction: string }]>;
+  skillOpinions: Array<[string, string]>;
+  stageStep: number;
 }
 
 const serializeState = (s: InternalState): SerializedState => ({
@@ -88,6 +94,8 @@ const serializeState = (s: InternalState): SerializedState => ({
   personalScores: Array.from(s.personalScores.entries()),
   classSids: Array.from(s.classSids.entries()).map(([k, v]) => [k, Array.from(v)]),
   questCards: Array.from(s.questCards.entries()),
+  skillOpinions: Array.from(s.skillOpinions.entries()),
+  stageStep: s.stageStep,
 });
 
 const deserializeState = (o: SerializedState): InternalState => ({
@@ -105,6 +113,8 @@ const deserializeState = (o: SerializedState): InternalState => ({
   personalScores: new Map(o.personalScores ?? []),
   classSids: new Map((o.classSids ?? []).map(([k, v]) => [k, new Set(v)])),
   questCards: new Map(o.questCards ?? []),
+  skillOpinions: new Map(o.skillOpinions ?? []),
+  stageStep: o.stageStep ?? 0,
 });
 
 const generateToken = (): string => {
@@ -165,6 +175,8 @@ export class RoomDO extends DurableObject<Env> {
       personalScores: new Map(),
       classSids: new Map(),
       questCards: new Map(),
+      skillOpinions: new Map(),
+      stageStep: 0,
     };
   }
 
@@ -186,6 +198,7 @@ export class RoomDO extends DurableObject<Env> {
       totalStudents: this.state.students.size,
       perClassCount,
       serverTime: Date.now(),
+      stageStep: this.state.stageStep,
     };
   }
 
@@ -296,6 +309,12 @@ export class RoomDO extends DurableObject<Env> {
       case 'T_NEXT_STAGE':
         return this.tNextStage(ws);
 
+      case 'T_NEXT_STEP':
+        return this.tNextStep(ws);
+
+      case 'T_PREV_STEP':
+        return this.tPrevStep(ws);
+
       case 'T_CLOSE_ROOM':
         return this.tCloseRoom(ws);
 
@@ -310,6 +329,9 @@ export class RoomDO extends DurableObject<Env> {
 
       case 'S_QUEST':
         return this.sQuest(ws, msg.growSkill, msg.gameAction, msg.schoolAction);
+
+      case 'S_SKILL_OPINION':
+        return this.sSkillOpinion(ws, msg.text);
 
       case 'S_RETRY':
         // 再挑戦：集計には影響しない、クライアント側で再表示するためのフラグ通知のみ
@@ -425,7 +447,59 @@ export class RoomDO extends DurableObject<Env> {
     if (!this.requireTeacher(ws)) return;
     this.state.currentStage = Math.min(this.state.currentStage + 1, 6);
     this.state.phase = 'lobby';
+    this.state.stageStep = 0;
     this.broadcastPhase();
+  }
+
+  private tNextStep(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    this.state.stageStep += 1;
+    this.broadcastPhase();
+  }
+
+  private tPrevStep(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    this.state.stageStep = Math.max(0, this.state.stageStep - 1);
+    this.broadcastPhase();
+  }
+
+  private sSkillOpinion(ws: WebSocket, textIn: string): void {
+    const att = this.getAttachment(ws);
+    if (att?.role !== 'student') {
+      this.sendErr(ws, 'NOT_STUDENT', '生徒のみ送信できます');
+      return;
+    }
+    const text = (textIn ?? '').trim().slice(0, 80);
+    if (!text) return;
+    this.state.skillOpinions.set(att.sid, text);
+    this.broadcastSkillOpinions();
+  }
+
+  private broadcastSkillOpinions(): void {
+    const opinions: Array<{ className: string; text: string }> = [];
+    const perClass: Record<string, number> = {};
+    for (const cls of this.state.classes) perClass[cls] = 0;
+    const wordCounts: Record<string, number> = {};
+
+    for (const [sid, text] of this.state.skillOpinions) {
+      const info = this.state.students.get(sid);
+      const cls = info?.className ?? '不明';
+      perClass[cls] = (perClass[cls] ?? 0) + 1;
+      if (opinions.length < 100) opinions.push({ className: cls, text });
+      // 簡易単語カウント：句読点・空白で分割、2文字以上のみ
+      const tokens = text.split(/[\s、。,.!?！？・\/／]+/).filter((t) => t.length >= 2);
+      for (const t of tokens) {
+        wordCounts[t] = (wordCounts[t] ?? 0) + 1;
+      }
+    }
+
+    this.broadcast({
+      type: 'SKILL_OPINIONS_AGG',
+      total: this.state.skillOpinions.size,
+      perClass,
+      opinions,
+      wordCounts,
+    });
   }
 
   private tCloseRoom(ws: WebSocket): void {

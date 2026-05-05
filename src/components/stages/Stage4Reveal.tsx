@@ -4,7 +4,7 @@ interface Props {
   variant: 'teacher' | 'student';
 }
 
-type SubStage = 'reveal' | 'jp_examples' | 'ai_trend' | 'ai_avatar';
+type SubStage = 'reveal' | 'jp_examples' | 'ai_overview' | 'ai_trend' | 'ai_avatar';
 
 const REVEAL_HEADLINE = '実は…';
 
@@ -22,8 +22,9 @@ export const Stage4Reveal = ({ variant }: Props) => {
         {([
           ['reveal', '① 種明かし'],
           ['jp_examples', '② 日本での例'],
-          ['ai_trend', '③ AI面接の今'],
-          ['ai_avatar', '④ AIアバター面接'],
+          ['ai_overview', '③ AI採用の全体像'],
+          ['ai_trend', '④ AI面接の今'],
+          ['ai_avatar', '⑤ AIアバター面接'],
         ] as const).map(([id, label]) => (
           <button
             key={id}
@@ -43,11 +44,101 @@ export const Stage4Reveal = ({ variant }: Props) => {
         <RevealSection variant={variant} />
       )}
       {sub === 'jp_examples' && <JpExamplesSection />}
+      {sub === 'ai_overview' && <AiOverviewSection />}
       {sub === 'ai_trend' && <AiTrendSection />}
       {sub === 'ai_avatar' && <AiAvatarSection />}
     </div>
   );
 };
+
+const AiOverviewSection = () => (
+  <>
+    <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+      AIが入っているのは「面接」だけじゃない
+    </h2>
+    <p className="text-sm text-slate-700">
+      採用のほぼ全工程に AI が関わってきています。代表的な使われ方をまとめると——
+    </p>
+
+    <div className="grid gap-2">
+      {[
+        {
+          icon: '📑',
+          title: '書類選考（エントリーシート・履歴書）',
+          body: '何千枚のESを AI が短時間で読み、要点・矛盾・キーワードを抽出。一次選考の負担を減らすために多くの大手で導入されています。',
+          examples: '例：HRBrain・i-plug・en-soku など',
+        },
+        {
+          icon: '🎯',
+          title: '適性検査・性格診断',
+          body: 'SPI・玉手箱に加え、ゲーム型・行動データ型のテストも増加。AIが回答パターンと過去の社員データを照合して相性を予測。',
+          examples: '例：SPI3・玉手箱・GPS・mitsucari・ミキワメ',
+        },
+        {
+          icon: '🎤',
+          title: '一次面接（録画・チャット）',
+          body: '学生がスマホで質問動画に答え、AI が話の構成・声・表情・間合いを評価。24時間どこからでも受験できる。',
+          examples: '例：SHaiN・HARUTAKA・apter・interviewmaker',
+        },
+        {
+          icon: '🤝',
+          title: 'スカウト・人材マッチング',
+          body: 'AI が職務経歴・志向性から候補者を自動マッチング。「こういう人材に向く求人」をAIがプッシュ。',
+          examples: '例：BizReach・Wantedly・LAPRAS',
+        },
+        {
+          icon: '🔎',
+          title: 'リファレンスチェック・経歴確認',
+          body: '前職の同僚や上司への聞き取りを AI が自動化。回答からポジティブ/ネガティブを分類しレポート化。',
+          examples: '例：back check・ASHIATO',
+        },
+        {
+          icon: '✉️',
+          title: '応募者対応（チャットボット）',
+          body: 'よくある質問への自動応答、面接日程調整、書類提出案内まで AI が対応。応募者の体験を改善。',
+          examples: '例：HRMOS・Recruit MASTER・各社独自Bot',
+        },
+        {
+          icon: '🌐',
+          title: 'オンボーディング・配属支援',
+          body: '入社後の最初の数か月、AI が新人の活躍可能性や離職リスクを予測し、上司に支援タイミングを提案。',
+          examples: '例：HRBrain・カオナビ・ミキワメ',
+        },
+        {
+          icon: '📊',
+          title: '社員評価・人事',
+          body: '評価のばらつき・偏りを AI が検知。透明性のある人事を支える方向で広がっています。',
+          examples: '例：HRMOS・SmartHR・タレントパレット',
+        },
+      ].map((row, i) => (
+        <div
+          key={i}
+          className="rounded-xl bg-white border border-violet-200 p-3 flex gap-3 items-start"
+        >
+          <span className="text-2xl shrink-0">{row.icon}</span>
+          <div className="min-w-0">
+            <div className="font-bold text-sm text-slate-900">{row.title}</div>
+            <p className="text-xs text-slate-700 mt-0.5 leading-relaxed">{row.body}</p>
+            <p className="text-[11px] text-violet-700 mt-1">{row.examples}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div className="rounded-xl bg-white border-2 border-violet-300 p-4">
+      <p className="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
+        つまり、これからの就活・転職は——
+        <br />
+        <span className="text-violet-700">
+          人と話す前に、AI と対話する場面が当たり前になっていきます。
+        </span>
+      </p>
+    </div>
+    <p className="text-[11px] text-slate-500 italic">
+      ※ サービス名は代表例です。導入状況は変動します。
+    </p>
+  </>
+);
 
 const RevealSection = ({ variant: _variant }: Props) => (
   <>
