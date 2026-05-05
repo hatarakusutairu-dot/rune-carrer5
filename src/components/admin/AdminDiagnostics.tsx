@@ -28,8 +28,8 @@ const fmt = (b: number): string => {
 };
 
 const ALL_PATHS = [
-  ...EMOTIONS.map((e) => ({ src: `/img/emotions/${e.key}.png`, label: e.label, fallback: e.emoji })),
-  ...AI_AVATARS.map((a) => ({ src: `/img/avatars/ai_${a.key}.png`, label: a.name, fallback: a.face })),
+  ...EMOTIONS.map((e) => ({ src: `/img/emotion-${e.key}.png`, label: e.label, fallback: e.emoji })),
+  ...AI_AVATARS.map((a) => ({ src: `/img/avatar-${a.key}.png`, label: a.name, fallback: a.face })),
 ];
 
 export const AdminDiagnostics = () => {

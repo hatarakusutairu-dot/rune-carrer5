@@ -286,7 +286,7 @@ const AiAvatarSection = () => (
       最近は <strong>AIが作ったアバター面接官</strong> が登場しています。
     </p>
 
-    {/* アバター枠：管理ページで上書き or public/img/avatars/ai_{key}.png があれば差し替え、無ければCSS+絵文字 */}
+    {/* アバター枠：public/img/avatar-{key}.png があれば差し替え、無ければCSS+絵文字 */}
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {AI_AVATARS.map((a) => (
         <div
@@ -294,7 +294,7 @@ const AiAvatarSection = () => (
           className={`rounded-xl bg-gradient-to-br ${a.color} border border-white p-3 text-center shadow-sm`}
         >
           <ImageWithFallback
-            src={`/img/avatars/ai_${a.key}.png`}
+            src={`/img/avatar-${a.key}.png`}
             fallback={a.face}
             alt={a.name}
             imgClassName="mx-auto w-20 h-20 rounded-full object-cover"

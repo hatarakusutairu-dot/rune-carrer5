@@ -16,13 +16,13 @@ type Slot = {
 };
 
 const EMOTION_SLOTS: Slot[] = EMOTIONS.map((e) => ({
-  src: `/img/emotions/${e.key}.png`,
+  src: `/img/emotion-${e.key}.png`,
   label: e.label,
   fallback: e.emoji,
 }));
 
 const AVATAR_SLOTS: Slot[] = AI_AVATARS.map((a) => ({
-  src: `/img/avatars/ai_${a.key}.png`,
+  src: `/img/avatar-${a.key}.png`,
   label: a.name,
   fallback: a.face,
 }));

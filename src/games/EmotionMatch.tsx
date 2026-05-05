@@ -77,7 +77,7 @@ export const EmotionMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
     >
       <div className="flex justify-center py-3">
         <ImageWithFallback
-          src={`/img/emotions/${q.key}.png`}
+          src={`/img/emotion-${q.key}.png`}
           fallback={q.emoji}
           alt={q.answer}
           imgClassName="w-32 h-32 rounded-2xl object-cover shadow-sm"
@@ -106,7 +106,7 @@ export const EmotionMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
         })}
       </div>
       <p className="mt-3 text-[11px] text-slate-500 text-center">
-        public/img/emotions/{'{key}'}.png を配置すると肖像イラストへ自動切替
+        public/img/emotion-{'{key}'}.png を配置すると肖像イラストへ自動切替
       </p>
     </GameShell>
   );
