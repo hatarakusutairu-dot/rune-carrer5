@@ -29,5 +29,10 @@ export const HomeRoute = () => (
     <p className="mt-8 text-xs text-slate-500">
       個人情報は一切収集しません。回答結果は端末内にのみ保存されます。
     </p>
+    <p className="mt-2 text-[11px] text-slate-400">
+      <Link to="/admin" className="underline hover:text-slate-600">
+        管理ページ（投影PC用）
+      </Link>
+    </p>
   </Layout>
 );

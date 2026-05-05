@@ -1,0 +1,72 @@
+import { Link } from 'react-router-dom';
+import { Layout } from '@/components/common/Layout';
+import { AdminQuestExport } from '@/components/admin/AdminQuestExport';
+
+export const AdminRoute = () => {
+  return (
+    <Layout title="管理ページ" subtitle="画像・スライド・データ管理（投影PC専用）">
+      <div className="space-y-6 max-w-4xl">
+        <NavBack />
+
+        <Section title="📥 アンケート / My Quest 結果ダウンロード" tone="amber">
+          <AdminQuestExport />
+        </Section>
+
+        <Section title="🖼 画像管理（EmotionMatch・AIアバター）" tone="violet">
+          <Placeholder text="（次フェーズで実装：端末にアップロード→ゲーム画面で自動使用）" />
+        </Section>
+
+        <Section title="🎞 スライド管理" tone="rose">
+          <Placeholder text="（次フェーズで実装：PNG/JPG/PDF をアップロード→講師大画面で順送り表示）" />
+        </Section>
+
+        <Section title="🔍 配信ファイル診断" tone="slate">
+          <Placeholder text="（次フェーズで実装：/img/ 配下の画像が配置済みか/未配置かを一覧表示）" />
+        </Section>
+
+        <p className="text-[11px] text-slate-500 italic">
+          管理ページへのアクセスは <code>/admin</code> で開けます。授業中は講師モード（<code>/teacher</code>）に切り替えてください。
+        </p>
+      </div>
+    </Layout>
+  );
+};
+
+const NavBack = () => (
+  <div className="flex gap-2 text-sm">
+    <Link to="/" className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
+      ← ホームへ
+    </Link>
+    <Link to="/teacher" className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
+      講師モードへ
+    </Link>
+  </div>
+);
+
+const TONE_CLASSES: Record<string, string> = {
+  amber: 'from-amber-50 to-rose-50 border-amber-200',
+  violet: 'from-violet-50 to-sky-50 border-violet-200',
+  rose: 'from-rose-50 to-pink-50 border-rose-200',
+  slate: 'from-slate-50 to-slate-100 border-slate-200',
+};
+
+const Section = ({
+  title,
+  tone,
+  children,
+}: {
+  title: string;
+  tone: keyof typeof TONE_CLASSES;
+  children: React.ReactNode;
+}) => (
+  <section className={`rounded-2xl bg-gradient-to-br ${TONE_CLASSES[tone]} border p-5`}>
+    <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+    <div className="mt-3">{children}</div>
+  </section>
+);
+
+const Placeholder = ({ text }: { text: string }) => (
+  <div className="rounded-xl bg-white/70 border-2 border-dashed border-slate-300 p-6 text-center">
+    <div className="text-sm text-slate-600">{text}</div>
+  </div>
+);

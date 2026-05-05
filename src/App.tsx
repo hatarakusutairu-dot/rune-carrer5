@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { HomeRoute } from '@/routes/HomeRoute';
 import { TeacherRoute } from '@/routes/TeacherRoute';
 import { StudentRoute } from '@/routes/StudentRoute';
+import { AdminRoute } from '@/routes/AdminRoute';
 import { SyncProvider } from '@/contexts/SyncContext';
 
 const App = () => (
@@ -10,6 +11,7 @@ const App = () => (
       <Route path="/" element={<HomeRoute />} />
       <Route path="/teacher" element={<TeacherRoute />} />
       <Route path="/student" element={<StudentRoute />} />
+      <Route path="/admin" element={<AdminRoute />} />
       <Route path="*" element={<HomeRoute />} />
     </Routes>
   </SyncProvider>
