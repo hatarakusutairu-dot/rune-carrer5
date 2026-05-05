@@ -600,7 +600,7 @@ export class RoomDO extends DurableObject<Env> {
       growCount[card.growSkill] = (growCount[card.growSkill] ?? 0) + 1;
       gameCount[card.gameAction] = (gameCount[card.gameAction] ?? 0) + 1;
       schoolCount[card.schoolAction] = (schoolCount[card.schoolAction] ?? 0) + 1;
-      if (samples.length < 20) {
+      if (samples.length < 500) {
         samples.push({ className: cls, ...card });
       }
     }

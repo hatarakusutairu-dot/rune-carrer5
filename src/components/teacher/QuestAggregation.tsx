@@ -6,6 +6,72 @@ const topN = (counts: Record<string, number>, n: number): Array<[string, number]
   return arr.slice(0, n);
 };
 
+const csvEscape = (v: string | number): string => {
+  const s = String(v);
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+};
+
+const downloadBlob = (filename: string, content: string, mime: string): void => {
+  const bom = '﻿';
+  const blob = new Blob([bom + content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const buildCsv = (
+  agg: NonNullable<ReturnType<typeof useSync>['questAgg']>
+): string => {
+  const lines: string[] = [];
+  lines.push('# My Quest Card 集計');
+  lines.push(`# 提出総数,${agg.total}`);
+  lines.push('');
+  lines.push('# クラス別提出数');
+  lines.push('クラス,人数');
+  for (const [cls, n] of Object.entries(agg.perClass)) {
+    lines.push([csvEscape(cls), n].join(','));
+  }
+  lines.push('');
+  lines.push('# 育てたい力 集計');
+  lines.push('内容,人数');
+  for (const [k, v] of Object.entries(agg.growSkillCounts).sort((a, b) => b[1] - a[1])) {
+    lines.push([csvEscape(k), v].join(','));
+  }
+  lines.push('');
+  lines.push('# ゲームでの行動 集計');
+  lines.push('内容,人数');
+  for (const [k, v] of Object.entries(agg.gameActionCounts).sort((a, b) => b[1] - a[1])) {
+    lines.push([csvEscape(k), v].join(','));
+  }
+  lines.push('');
+  lines.push('# 学校生活での行動 集計');
+  lines.push('内容,人数');
+  for (const [k, v] of Object.entries(agg.schoolActionCounts).sort((a, b) => b[1] - a[1])) {
+    lines.push([csvEscape(k), v].join(','));
+  }
+  lines.push('');
+  lines.push('# 個別カード（匿名）');
+  lines.push('クラス,育てたい力,ゲームでの行動,学校生活での行動');
+  for (const s of agg.samples) {
+    lines.push(
+      [csvEscape(s.className), csvEscape(s.growSkill), csvEscape(s.gameAction), csvEscape(s.schoolAction)].join(','),
+    );
+  }
+  return lines.join('\r\n');
+};
+
+const stamp = (): string => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+};
+
 export const QuestAggregation = () => {
   const { state, questAgg } = useSync();
   if (!state) return null;
@@ -33,9 +99,33 @@ export const QuestAggregation = () => {
       <div className="rounded-2xl bg-gradient-to-br from-amber-50 via-rose-50 to-emerald-50 border border-amber-300 p-5">
         <div className="flex items-baseline justify-between flex-wrap gap-2">
           <h3 className="font-bold text-lg">My Quest Card 集計</h3>
-          <div className="text-sm text-slate-700">
-            <span className="text-2xl font-black tabular-nums">{total}</span>
-            <span className="text-slate-500"> / {expected}人 提出（{ratio.toFixed(0)}%）</span>
+          <div className="flex items-baseline gap-3">
+            <div className="text-sm text-slate-700">
+              <span className="text-2xl font-black tabular-nums">{total}</span>
+              <span className="text-slate-500"> / {expected}人 提出（{ratio.toFixed(0)}%）</span>
+            </div>
+            <button
+              onClick={() => {
+                downloadBlob(`my-quest_${stamp()}.csv`, buildCsv(questAgg), 'text/csv;charset=utf-8');
+              }}
+              className="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-white hover:bg-slate-900 transition"
+              title="集計と匿名カードをCSVで保存（Excelで開けます）"
+            >
+              CSVで保存
+            </button>
+            <button
+              onClick={() => {
+                downloadBlob(
+                  `my-quest_${stamp()}.json`,
+                  JSON.stringify(questAgg, null, 2),
+                  'application/json',
+                );
+              }}
+              className="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-200 text-slate-800 hover:bg-slate-300 transition"
+              title="集計データをJSONで保存"
+            >
+              JSON
+            </button>
           </div>
         </div>
 
