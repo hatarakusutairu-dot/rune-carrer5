@@ -74,10 +74,6 @@ const TeacherView = () => (
         </p>
       </div>
     </div>
-
-    <p className="mt-4 text-xs text-slate-500">
-      講師メモ：作成後にスクショ保存を案内。「正解はない」「来年見返してOK」と添える。
-    </p>
   </div>
 );
 

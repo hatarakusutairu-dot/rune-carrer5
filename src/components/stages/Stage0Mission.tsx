@@ -27,17 +27,12 @@ export const Stage0Mission = ({ variant }: Props) => {
 
       <div className="mt-6 rounded-xl bg-white border border-emerald-200 p-4">
         <p className="text-sm text-slate-700 leading-relaxed">
-          このあと7つのミニゲームに挑戦します。
+          このあといくつかのミニゲームに挑戦します。
           <br />
           うまくできなくて大丈夫。<strong>選び方</strong>と<strong>考え方</strong>を見ています。
         </p>
       </div>
 
-      {variant === 'teacher' && (
-        <p className="mt-4 text-xs text-slate-500">
-          講師メモ：「正解はない」を最初に強調してから次へ進んでください。
-        </p>
-      )}
       {variant === 'student' && (
         <p className="mt-4 text-xs text-slate-500">
           先生のスタートを待ってね。スマホはこのままにしておいてOK。
