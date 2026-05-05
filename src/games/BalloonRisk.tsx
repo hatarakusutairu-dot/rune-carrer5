@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
@@ -30,17 +30,21 @@ const POP_RANGE: Array<[number, number]> = [
 ];
 const PUMP_VALUE = 1;
 
-const colors = [
-  'bg-red-400',
-  'bg-yellow-400',
-  'bg-blue-400',
-  'bg-green-400',
-  'bg-purple-400',
-  'bg-pink-400',
-  'bg-orange-400',
-  'bg-cyan-400',
-  'bg-lime-400',
-];
+const COLORS = ['red', 'yellow', 'blue', 'green', 'purple', 'pink'] as const;
+type ColorName = typeof COLORS[number];
+
+// 画像が無い時のフォールバック用 CSS 色
+const CSS_COLORS: Record<ColorName, string> = {
+  red: 'bg-red-400',
+  yellow: 'bg-yellow-400',
+  blue: 'bg-blue-400',
+  green: 'bg-green-400',
+  purple: 'bg-purple-400',
+  pink: 'bg-pink-400',
+};
+
+const sizeOf = (pumps: number): 'small' | 'mid' | 'large' =>
+  pumps < 6 ? 'small' : pumps < 16 ? 'mid' : 'large';
 
 const drawPopPoint = (min: number, max: number): number =>
   Math.floor(Math.random() * (max - min + 1)) + min;
@@ -111,6 +115,8 @@ export const BalloonRisk = ({ startedAtMs, durationMs, onComplete }: GameProps) 
 
   const totalBank = banked.reduce((a, b) => a + b, 0);
   const balloonSize = Math.min(280, 80 + currentPumps * 8);
+  const color = COLORS[balloonIdx % COLORS.length];
+  const size = sizeOf(currentPumps);
 
   return (
     <GameShell
@@ -134,14 +140,11 @@ export const BalloonRisk = ({ startedAtMs, durationMs, onComplete }: GameProps) 
     >
       <div className="flex justify-center items-end h-72 mt-2 relative">
         {showResult === 'popped' ? (
-          <div className="text-7xl">💥</div>
+          <PopVisual />
         ) : showResult === 'banked' ? (
           <div className="text-7xl">💰</div>
         ) : (
-          <div
-            className={`${colors[balloonIdx % colors.length]} rounded-full transition-all duration-200 shadow-lg`}
-            style={{ width: `${balloonSize}px`, height: `${balloonSize}px` }}
-          />
+          <Balloon color={color} size={size} pixelSize={balloonSize} />
         )}
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
@@ -161,5 +164,57 @@ export const BalloonRisk = ({ startedAtMs, durationMs, onComplete }: GameProps) 
         </button>
       </div>
     </GameShell>
+  );
+};
+
+// 画像 (/img/balloon-{color}-{size}.png) があれば表示、無ければ CSS 色丸
+const Balloon = ({
+  color,
+  size,
+  pixelSize,
+}: {
+  color: ColorName;
+  size: 'small' | 'mid' | 'large';
+  pixelSize: number;
+}) => {
+  const [failed, setFailed] = useState(false);
+  // 風船切替・サイズ切替時にエラーフラグをリセット
+  useEffect(() => {
+    setFailed(false);
+  }, [color, size]);
+
+  const style = { width: `${pixelSize}px`, height: `${pixelSize}px` };
+  if (failed) {
+    return (
+      <div
+        className={`${CSS_COLORS[color]} rounded-full transition-all duration-200 shadow-lg`}
+        style={style}
+      />
+    );
+  }
+  return (
+    <img
+      src={`/img/balloon-${color}-${size}.png`}
+      alt=""
+      style={style}
+      className="object-contain transition-all duration-200 select-none pointer-events-none"
+      draggable={false}
+      onError={() => setFailed(true)}
+    />
+  );
+};
+
+// 割れた風船：画像があれば表示、無ければ💥絵文字
+const PopVisual = () => {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <div className="text-7xl">💥</div>;
+  return (
+    <img
+      src="/img/balloon-pop.png"
+      alt=""
+      className="w-32 h-32 object-contain"
+      draggable={false}
+      onError={() => setFailed(true)}
+    />
   );
 };
