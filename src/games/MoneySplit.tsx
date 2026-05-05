@@ -2,6 +2,16 @@ import { useRef, useState } from 'react';
 import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
+import { DecorImage } from '@/components/common/DecorImage';
+
+// 用意してある画像枚数: 1, 3, 5, 7, 10
+const COIN_IMAGE_SIZES = [1, 3, 5, 7, 10];
+const coinImg = (n: number): string => {
+  const closest = COIN_IMAGE_SIZES.reduce((a, b) =>
+    Math.abs(b - n) < Math.abs(a - n) ? b : a,
+  );
+  return `/img/coin-${closest}.png`;
+};
 
 interface Scenario {
   partner: string;
@@ -60,11 +70,25 @@ export const MoneySplit = ({ startedAtMs, durationMs, onComplete }: GameProps) =
 
       <div className="grid grid-cols-2 gap-2 text-center">
         <div className="rounded-xl bg-emerald-50 p-3 border border-emerald-200">
+          {draft > 0 && (
+            <DecorImage
+              src={coinImg(draft)}
+              alt={`コイン${draft}枚`}
+              className="w-14 h-14 mx-auto object-contain mb-1"
+            />
+          )}
           <div className="text-xs text-emerald-700">自分</div>
           <div className="text-3xl font-black text-emerald-800">{draft}</div>
           <div className="text-[10px] text-emerald-700">コイン</div>
         </div>
         <div className="rounded-xl bg-amber-50 p-3 border border-amber-200">
+          {partnerShare > 0 && (
+            <DecorImage
+              src={coinImg(partnerShare)}
+              alt={`コイン${partnerShare}枚`}
+              className="w-14 h-14 mx-auto object-contain mb-1"
+            />
+          )}
           <div className="text-xs text-amber-700">相手</div>
           <div className="text-3xl font-black text-amber-800">{partnerShare}</div>
           <div className="text-[10px] text-amber-700">コイン</div>

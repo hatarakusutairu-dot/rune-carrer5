@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
+import { ImageWithFallback } from '@/components/common/ImageWithFallback';
 
 const TOTAL_TRIALS = 60;
 
@@ -122,7 +123,15 @@ export const StopSignal = ({ startedAtMs, durationMs, onComplete }: GameProps) =
         }`}
         aria-label="signal"
       >
-        {current?.isStop ? '✋' : current ? '▶' : feedback === 'good' ? '◎' : feedback === 'bad' ? '✕' : '・'}
+        {current ? (
+          <ImageWithFallback
+            src={current.isStop ? '/img/signal-stop.png' : '/img/signal-go.png'}
+            fallback={current.isStop ? '✋' : '▶'}
+            alt={current.isStop ? 'STOP' : 'GO'}
+            imgClassName="w-40 h-40 object-contain"
+            fallbackClassName="text-7xl"
+          />
+        ) : feedback === 'good' ? '◎' : feedback === 'bad' ? '✕' : '・'}
       </button>
       <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[10px] text-slate-500">
         <div>反応猶予<br /><span className="font-bold text-slate-700 text-sm">{Math.round(showMs)}ms</span></div>
