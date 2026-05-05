@@ -415,15 +415,14 @@ const AvatarVideoEmbed = () => {
   const url = import.meta.env.VITE_AI_AVATAR_VIDEO_URL as string | undefined;
   if (!url) {
     return (
-      <div className="rounded-xl bg-white border-2 border-dashed border-violet-300 p-4 text-center">
-        <div className="text-sm font-semibold text-slate-700">
-          🎥 ここにAIアバター紹介動画を表示できます
+      <div className="rounded-xl bg-gradient-to-br from-violet-50 to-rose-50 border-2 border-dashed border-violet-300 p-5 text-center">
+        <div className="text-3xl">🎥</div>
+        <div className="mt-2 text-sm font-bold text-slate-800">
+          実際のAIアバター面接、見てみる？
         </div>
-        <p className="mt-1 text-xs text-slate-500 leading-relaxed">
-          .env に <code className="bg-slate-100 px-1 rounded">VITE_AI_AVATAR_VIDEO_URL</code> を
-          設定すると動画が埋め込まれます。
-          <br />
-          （例：YouTube の埋め込みURL <code>https://www.youtube.com/embed/...</code>）
+        <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+          下のリンクから本物のサービスを別タブで覗けます。<br />
+          AIが質問してくる体験デモがあるサービスもあります。
         </p>
       </div>
     );

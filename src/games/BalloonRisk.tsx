@@ -9,15 +9,24 @@ import { useTimeoutOnce } from './_useTimer';
 // - 等価な確率モデル：j回目のポンプで爆発する確率は 1/(maxPossible - j + 1)
 // - 結果として、ポンプを重ねるほど次の爆発確率は上がるが、各風船の運命は事前に決まっている
 
-const TOTAL_BALLOONS = 6;
-// 風船ごとに最小〜最大ポンプ数を変える（学術版BARTは128だが教育用に短縮）
+const TOTAL_BALLOONS = 15;
+// 風船ごとに最小〜最大ポンプ数を変える（学術版BARTは30個・最大128回ポンプ。教育用に短縮）
 const POP_RANGE: Array<[number, number]> = [
-  [4, 12],   // やや簡単
+  [4, 12],
   [6, 20],
   [8, 24],
   [5, 16],
   [10, 28],
   [7, 22],
+  [3, 10],
+  [12, 32],
+  [6, 18],
+  [9, 26],
+  [4, 14],
+  [11, 30],
+  [7, 24],
+  [5, 20],
+  [8, 28],
 ];
 const PUMP_VALUE = 1;
 
@@ -28,6 +37,9 @@ const colors = [
   'bg-green-400',
   'bg-purple-400',
   'bg-pink-400',
+  'bg-orange-400',
+  'bg-cyan-400',
+  'bg-lime-400',
 ];
 
 const drawPopPoint = (min: number, max: number): number =>
