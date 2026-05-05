@@ -1,0 +1,242 @@
+import { useEffect, useRef, useState } from 'react';
+import type { GameProps } from './types';
+import { GameShell } from './_GameShell';
+import { useTimeoutOnce } from './_useTimer';
+
+// Knack の Wasabi Waiter に近い接客マルチタスク課題
+// - 客が席に到着、注文を表示
+// - 一定時間内にプレイヤーが「料理」をタップして客に運ぶ
+// - 正しい料理 = 正解、間違い = ミス、時間切れ = 取りこぼし
+// - 同時に最大3卓まで進行 → マルチタスク・優先順位
+
+const SEAT_COUNT = 3;
+const MENU = [
+  { key: 'sushi', label: '寿司', icon: '🍣' },
+  { key: 'ramen', label: 'ラーメン', icon: '🍜' },
+  { key: 'tempura', label: '天ぷら', icon: '🍤' },
+  { key: 'curry', label: 'カレー', icon: '🍛' },
+  { key: 'salad', label: 'サラダ', icon: '🥗' },
+  { key: 'tea', label: 'お茶', icon: '🍵' },
+] as const;
+
+type MenuItem = (typeof MENU)[number];
+
+interface Customer {
+  id: number;
+  emoji: string;     // 顔
+  order: MenuItem;
+  arrivedAt: number;
+  patience: number;  // ms
+}
+
+const FACES_HAPPY = ['😀', '😊', '😄', '🙂', '😃'];
+const FACES_NEUTRAL = ['😐', '😑'];
+const FACES_IMPATIENT = ['😤', '😠', '😡'];
+
+const pickRandom = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+let nextCustomerId = 1;
+
+const newCustomer = (now: number): Customer => ({
+  id: nextCustomerId++,
+  emoji: pickRandom(FACES_HAPPY),
+  order: pickRandom(MENU),
+  arrivedAt: now,
+  patience: 9000 + Math.random() * 4000, // 9〜13秒
+});
+
+const faceFor = (customer: Customer, now: number): string => {
+  const elapsed = now - customer.arrivedAt;
+  const ratio = elapsed / customer.patience;
+  if (ratio < 0.5) return customer.emoji;
+  if (ratio < 0.8) return pickRandom(FACES_NEUTRAL);
+  return pickRandom(FACES_IMPATIENT);
+};
+
+export const WasabiWaiter = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
+  const [seats, setSeats] = useState<Array<Customer | null>>(() => Array(SEAT_COUNT).fill(null));
+  const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
+  const [served, setServed] = useState(0);
+  const [correct, setCorrect] = useState(0);
+  const [missed, setMissed] = useState(0);
+  const [waitTimes, setWaitTimes] = useState<number[]>([]);
+  const [feedback, setFeedback] = useState<{ seat: number; type: 'good' | 'bad' | 'lost' } | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const finishedRef = useRef(false);
+
+  // タイマー
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(t);
+  }, []);
+
+  // 新規客の自動発生
+  useEffect(() => {
+    const empty = seats.findIndex((s) => s === null);
+    if (empty < 0) return;
+    const t = window.setTimeout(() => {
+      setSeats((prev) => {
+        const arr = [...prev];
+        const i = arr.findIndex((s) => s === null);
+        if (i >= 0) arr[i] = newCustomer(Date.now());
+        return arr;
+      });
+    }, 600 + Math.random() * 800);
+    return () => clearTimeout(t);
+  }, [seats]);
+
+  // 我慢切れチェック
+  useEffect(() => {
+    let changed = false;
+    const next = seats.map((c, i) => {
+      if (!c) return c;
+      if (now - c.arrivedAt > c.patience) {
+        changed = true;
+        setMissed((m) => m + 1);
+        setFeedback({ seat: i, type: 'lost' });
+        window.setTimeout(() => setFeedback(null), 350);
+        return null;
+      }
+      return c;
+    });
+    if (changed) setSeats(next);
+  }, [now, seats]);
+
+  const finish = () => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    const avgWait = waitTimes.length > 0 ? waitTimes.reduce((a, b) => a + b, 0) / waitTimes.length : 0;
+    onComplete({
+      kind: 'wasabi_waiter',
+      served,
+      correctOrders: correct,
+      missed,
+      avgWaitMs: avgWait,
+    });
+  };
+
+  useTimeoutOnce(startedAtMs, durationMs, finish);
+
+  const handleServe = (menuKey: string) => {
+    if (selectedSeat === null) return;
+    const c = seats[selectedSeat];
+    if (!c) return;
+    const isCorrect = c.order.key === menuKey;
+    setServed((s) => s + 1);
+    if (isCorrect) {
+      setCorrect((s) => s + 1);
+      setWaitTimes((arr) => [...arr, Date.now() - c.arrivedAt]);
+    }
+    setFeedback({ seat: selectedSeat, type: isCorrect ? 'good' : 'bad' });
+    setSeats((prev) => {
+      const arr = [...prev];
+      arr[selectedSeat] = null;
+      return arr;
+    });
+    setSelectedSeat(null);
+    window.setTimeout(() => setFeedback(null), 350);
+  };
+
+  return (
+    <GameShell
+      title="食堂タイム（マルチタスク接客）"
+      description="お客さんを席ごと選んで、注文の料理を出してね。怒り出したら帰ってしまうよ。"
+      startedAtMs={startedAtMs}
+      durationMs={durationMs}
+      footer={
+        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="rounded-lg bg-emerald-50 p-2">
+            <div className="text-emerald-700">提供</div>
+            <div className="text-xl font-black text-emerald-800 tabular-nums">{served}</div>
+          </div>
+          <div className="rounded-lg bg-sky-50 p-2">
+            <div className="text-sky-700">注文一致</div>
+            <div className="text-xl font-black text-sky-800 tabular-nums">{correct}</div>
+          </div>
+          <div className="rounded-lg bg-red-50 p-2">
+            <div className="text-red-700">取りこぼし</div>
+            <div className="text-xl font-black text-red-700 tabular-nums">{missed}</div>
+          </div>
+        </div>
+      }
+    >
+      {/* 席エリア */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {seats.map((c, i) => {
+          const fb = feedback?.seat === i ? feedback.type : null;
+          const isSelected = selectedSeat === i;
+          return (
+            <button
+              key={i}
+              onClick={() => c && setSelectedSeat(isSelected ? null : i)}
+              disabled={!c}
+              className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition relative ${
+                fb === 'good'
+                  ? 'border-emerald-500 bg-emerald-50'
+                  : fb === 'bad'
+                    ? 'border-red-400 bg-red-50'
+                    : fb === 'lost'
+                      ? 'border-red-500 bg-red-100'
+                      : isSelected
+                        ? 'border-amber-500 bg-amber-50'
+                        : c
+                          ? 'border-slate-300 bg-white'
+                          : 'border-dashed border-slate-200 bg-slate-50'
+              }`}
+            >
+              {c ? (
+                <>
+                  <div className="text-4xl">{faceFor(c, now)}</div>
+                  <div className="mt-1 text-xs font-semibold flex items-center gap-1">
+                    <span>{c.order.icon}</span>
+                    <span>{c.order.label}</span>
+                  </div>
+                  {/* 我慢ゲージ */}
+                  <div className="absolute bottom-1 left-2 right-2 h-1 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        (now - c.arrivedAt) / c.patience > 0.7
+                          ? 'bg-red-500'
+                          : (now - c.arrivedAt) / c.patience > 0.4
+                            ? 'bg-amber-400'
+                            : 'bg-emerald-400'
+                      }`}
+                      style={{
+                        width: `${Math.max(0, 100 - ((now - c.arrivedAt) / c.patience) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  {fb === 'good' && <div className="absolute inset-0 flex items-center justify-center text-3xl">✨</div>}
+                  {fb === 'bad' && <div className="absolute inset-0 flex items-center justify-center text-3xl">✕</div>}
+                  {fb === 'lost' && <div className="absolute inset-0 flex items-center justify-center text-3xl">💢</div>}
+                </>
+              ) : (
+                <div className="text-xs text-slate-400">空席</div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* メニュー */}
+      <div className="rounded-xl bg-slate-50 p-2">
+        <div className="text-[10px] text-slate-500 mb-1 text-center">
+          {selectedSeat !== null ? '料理を選んで提供' : '席を選んでから料理を出す'}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {MENU.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => handleServe(m.key)}
+              disabled={selectedSeat === null}
+              className="rounded-lg bg-white border border-slate-200 p-2 disabled:opacity-40 active:scale-95"
+            >
+              <div className="text-2xl">{m.icon}</div>
+              <div className="text-xs">{m.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </GameShell>
+  );
+};

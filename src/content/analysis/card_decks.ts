@@ -7,8 +7,10 @@ export const analyzeCardDecks = (
   p: Extract<AnswerPayload, { kind: 'card_decks' }>
 ): PersonalAnalysis => {
   const score = p.finalScore;
-  const high = score > 30;
-  const mid = score > 0;
+  // 開始2000を基準に判定
+  const delta = score - 2000;
+  const high = delta > 500;
+  const mid = delta > 0;
 
   const headline = high
     ? '試しながら学んで切り替えられるタイプ'
@@ -71,7 +73,8 @@ export const analyzeCardDecks = (
     encourage: ENCOURAGE_DEFAULT,
     metrics: [
       { label: '引いた回数', value: `${p.picks.length}回` },
-      { label: '最終スコア', value: `${score}` },
+      { label: '最終所持金', value: `$${score}` },
+      { label: '増減', value: delta >= 0 ? `+$${delta}` : `-$${-delta}` },
     ],
   };
 };

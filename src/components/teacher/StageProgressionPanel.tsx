@@ -21,6 +21,8 @@ const GAME_LABELS: Record<GameId, string> = {
   money_split: 'コイン分配（社会的選好）',
   stop_signal: '信号反応（反応抑制）',
   pattern_match: 'パターン推論（規則性発見）',
+  towers: '塔の移動（計画力）',
+  wasabi_waiter: '食堂タイム（マルチタスク）',
 };
 
 const phaseLabel = (phase: Phase): string => {

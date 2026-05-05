@@ -45,11 +45,15 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       break;
     }
     case 'card_decks': {
-      // finalScore が高い = 学習成功（分析・継続）
-      // 後半で良いデッキに偏れているか（学習）はクライアント側で算出済の前提
-      s.analysis += Math.max(0, Math.min(payload.finalScore / 50, 6));
-      s.continuity += Math.max(0, Math.min(payload.finalScore / 50, 4));
-      s.challenge += Math.max(0, 3 - Math.abs(payload.finalScore) / 100);
+      // IGT版：開始所持金2000、終了時にプラスなら学習成功
+      const delta = payload.finalScore - 2000;
+      // 良デッキ（C,D=2,3）の選択比率
+      const goodPicks = payload.picks.filter((d) => d === 2 || d === 3).length;
+      const goodRatio = goodPicks / Math.max(payload.picks.length, 1);
+      s.analysis += Math.max(0, Math.min(6, delta / 200 + goodRatio * 4));
+      s.continuity += Math.max(0, Math.min(4, goodRatio * 5));
+      s.challenge += Math.max(0, 3 - Math.abs(delta) / 1000);
+      s.balance += Math.max(0, goodRatio * 3);
       break;
     }
     case 'emotion_match': {
@@ -84,6 +88,26 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       s.analysis += ratio * 4;
       s.continuity += ratio * 5;
       s.challenge += ratio > 0.5 ? 2 : 0;
+      break;
+    }
+    case 'towers': {
+      // 計画力：解いたパズル数 × 効率（最適手数比）
+      const efficiency = payload.totalMoves > 0
+        ? payload.optimalMoves / payload.totalMoves
+        : 0;
+      s.analysis += Math.min(6, payload.puzzlesSolved * 1.5);
+      s.balance += Math.min(4, efficiency * 5);
+      s.continuity += Math.min(3, payload.puzzlesSolved * 0.6);
+      s.leader += efficiency > 0.7 ? 2 : 0;
+      break;
+    }
+    case 'wasabi_waiter': {
+      // マルチタスク・対人サービス：捌いた数と正確性
+      const accuracy = payload.served > 0 ? payload.correctOrders / payload.served : 0;
+      s.support += Math.min(6, accuracy * 4 + payload.served * 0.2);
+      s.balance += Math.min(4, accuracy * 5);
+      s.leader += Math.min(3, payload.served * 0.3);
+      s.analysis += Math.min(2, accuracy * 2);
       break;
     }
   }
@@ -127,10 +151,12 @@ export const topNTypes = (
 // ゲームIDごとの推奨制限時間（ミリ秒）
 export const DEFAULT_GAME_DURATION: Record<GameId, number> = {
   balloon: 90_000,
-  digit_span: 80_000,
-  card_decks: 90_000,
+  digit_span: 90_000,
+  card_decks: 120_000,
   emotion_match: 70_000,
   money_split: 60_000,
   stop_signal: 90_000,
-  pattern_match: 70_000,
+  pattern_match: 80_000,
+  towers: 120_000,
+  wasabi_waiter: 90_000,
 };

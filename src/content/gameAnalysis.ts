@@ -11,6 +11,8 @@ import { analyzeEmotionMatch } from './analysis/emotion_match';
 import { analyzeMoneySplit } from './analysis/money_split';
 import { analyzeStopSignal } from './analysis/stop_signal';
 import { analyzePatternMatch } from './analysis/pattern_match';
+import { analyzeTowers } from './analysis/towers';
+import { analyzeWasabiWaiter } from './analysis/wasabi_waiter';
 
 export interface PersonalAnalysis {
   // メタ
@@ -50,6 +52,8 @@ export const GAME_LABELS: Record<GameId, string> = {
   money_split: 'コイン分配の選好課題',
   stop_signal: '反応抑制（信号）課題',
   pattern_match: 'パターン推論課題',
+  towers: '塔の移動（計画力）課題',
+  wasabi_waiter: '食堂タイム（マルチタスク）課題',
 };
 
 export const GAME_PURPOSE: Record<GameId, string> = {
@@ -60,6 +64,8 @@ export const GAME_PURPOSE: Record<GameId, string> = {
   money_split: '自分と他者にどう資源を配分するかの社会的選好',
   stop_signal: '衝動的な反応をどれだけ抑えられるか',
   pattern_match: '規則性を見つけて未知の問題に応用できるか',
+  towers: '先を読んで段取りよく動けるか',
+  wasabi_waiter: '複数の作業をどう優先・処理するか',
 };
 
 // ─────────── ディスパッチ ───────────
@@ -79,5 +85,9 @@ export const analyzeMyAnswer = (payload: AnswerPayload): PersonalAnalysis => {
       return analyzeStopSignal(payload);
     case 'pattern_match':
       return analyzePatternMatch(payload);
+    case 'towers':
+      return analyzeTowers(payload);
+    case 'wasabi_waiter':
+      return analyzeWasabiWaiter(payload);
   }
 };

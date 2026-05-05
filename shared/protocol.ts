@@ -24,7 +24,9 @@ export type GameId =
   | 'emotion_match'
   | 'money_split'
   | 'stop_signal'
-  | 'pattern_match';
+  | 'pattern_match'
+  | 'towers'
+  | 'wasabi_waiter';
 
 export const GAME_ORDER: GameId[] = [
   'balloon',
@@ -34,6 +36,8 @@ export const GAME_ORDER: GameId[] = [
   'money_split',
   'stop_signal',
   'pattern_match',
+  'towers',
+  'wasabi_waiter',
 ];
 
 export const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '🌱', '🔥', '👏', '🎉'] as const;
@@ -116,7 +120,9 @@ export type AnswerPayload =
   | { kind: 'emotion_match'; correct: number; total: number }
   | { kind: 'money_split'; selfShares: number[] }
   | { kind: 'stop_signal'; commission: number; omission: number; rtMs: number }
-  | { kind: 'pattern_match'; correct: number; total: number };
+  | { kind: 'pattern_match'; correct: number; total: number }
+  | { kind: 'towers'; puzzlesSolved: number; totalMoves: number; optimalMoves: number; timeMs: number }
+  | { kind: 'wasabi_waiter'; served: number; correctOrders: number; missed: number; avgWaitMs: number };
 
 // ─────────── Server → Client ───────────
 

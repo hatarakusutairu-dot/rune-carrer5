@@ -9,6 +9,8 @@ import { EmotionMatch } from './EmotionMatch';
 import { MoneySplit } from './MoneySplit';
 import { StopSignal } from './StopSignal';
 import { PatternMatch } from './PatternMatch';
+import { Towers } from './Towers';
+import { WasabiWaiter } from './WasabiWaiter';
 
 interface GameContainerProps {
   gameId: GameId;
@@ -53,5 +55,9 @@ export const GameContainer = ({ gameId, startedAtMs, durationMs, onAnswered }: G
       return <StopSignal {...props} />;
     case 'pattern_match':
       return <PatternMatch {...props} />;
+    case 'towers':
+      return <Towers {...props} />;
+    case 'wasabi_waiter':
+      return <WasabiWaiter {...props} />;
   }
 };

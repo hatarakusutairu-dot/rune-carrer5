@@ -61,6 +61,20 @@ const THEMES: Record<
     label: 'みんなのパターン読み',
     sub: '法則、見抜けたかな？',
   },
+  towers: {
+    emoji: '🗼',
+    subEmoji: '✨',
+    color: 'from-slate-100 via-sky-100 to-emerald-100',
+    label: 'みんなの段取り力',
+    sub: '何手で解けたかな？',
+  },
+  wasabi_waiter: {
+    emoji: '🍣',
+    subEmoji: '✨',
+    color: 'from-orange-100 via-amber-100 to-rose-100',
+    label: 'みんなの接客スタイル',
+    sub: 'お客さんに笑顔届いた？',
+  },
 };
 
 export const GameResultBurst = ({ gameId, durationMs = 1800, onDone }: GameResultBurstProps) => {

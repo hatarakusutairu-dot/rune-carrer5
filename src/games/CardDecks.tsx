@@ -3,22 +3,100 @@ import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
 
-// 山引き課題：4つのデッキにそれぞれ報酬と罰金の分布が違う
-// A,B：高報酬・高罰金（不利） / C,D：低報酬・低罰金（有利）
-const DECKS = [
-  { name: 'A', reward: 12, punishMean: -25, punishProb: 0.5 }, // 期待値マイナス
-  { name: 'B', reward: 12, punishMean: -50, punishProb: 0.1 },
-  { name: 'C', reward: 5, punishMean: -10, punishProb: 0.5 }, // 期待値プラス
-  { name: 'D', reward: 5, punishMean: -25, punishProb: 0.1 },
-];
-const COLORS = ['bg-red-300', 'bg-blue-300', 'bg-green-300', 'bg-purple-300'];
+// 本物の Iowa Gambling Task (IGT) スケジュール
+// 各デッキは固定パターンで報酬と罰金が出る
+// - A：高報酬+100、頻繁な罰金（10枚ごとに5回、平均-250）→ 期待値マイナス
+// - B：高報酬+100、稀な大罰金（10枚ごとに1回 -1250）→ 期待値マイナス
+// - C：低報酬+50、頻繁な小罰金（10枚ごとに5回、平均-50）→ 期待値プラス
+// - D：低報酬+50、稀な罰金（10枚ごとに1回 -250）→ 期待値プラス
 
 const TOTAL_PICKS = 50;
 
+interface DeckCard {
+  reward: number;
+  penalty: number; // 0 なら罰金なし
+}
+
+const DECK_CYCLES: Record<number, DeckCard[]> = {
+  // Deck A：10枚で +1000、罰金合計 -1250
+  0: [
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: -150 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: -300 },
+    { reward: 100, penalty: -200 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: -250 },
+    { reward: 100, penalty: -350 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: 0 },
+  ],
+  // Deck B：10枚で +1000、罰金 -1250 を1回
+  1: [
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: 0 },
+    { reward: 100, penalty: -1250 },
+    { reward: 100, penalty: 0 },
+  ],
+  // Deck C：10枚で +500、罰金合計 -250（小さく分散）
+  2: [
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: -50 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: -50 },
+    { reward: 50, penalty: -50 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: -25 },
+    { reward: 50, penalty: -75 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: 0 },
+  ],
+  // Deck D：10枚で +500、罰金 -250 を1回
+  3: [
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: -250 },
+    { reward: 50, penalty: 0 },
+    { reward: 50, penalty: 0 },
+  ],
+};
+
+const DECK_NAMES = ['A', 'B', 'C', 'D'];
+const COLORS = ['bg-red-300', 'bg-blue-300', 'bg-green-300', 'bg-purple-300'];
+
+// シャッフルされた山を作成（各デッキ独立）
+const buildShuffledDecks = (): Record<number, DeckCard[]> => {
+  const decks: Record<number, DeckCard[]> = {};
+  for (let i = 0; i < 4; i++) {
+    const cycle = DECK_CYCLES[i];
+    const deck: DeckCard[] = [];
+    // 50枚を満たすために cycle を繰り返してシャッフル
+    while (deck.length < TOTAL_PICKS + 5) {
+      const shuffled = [...cycle].sort(() => Math.random() - 0.5);
+      deck.push(...shuffled);
+    }
+    decks[i] = deck;
+  }
+  return decks;
+};
+
 export const CardDecks = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
+  const decksRef = useRef(buildShuffledDecks());
+  const [pickCounters, setPickCounters] = useState<Record<number, number>>({ 0: 0, 1: 0, 2: 0, 3: 0 });
   const [picks, setPicks] = useState<number[]>([]);
-  const [score, setScore] = useState(0);
-  const [flash, setFlash] = useState<{ deckIdx: number; gain: number } | null>(null);
+  const [score, setScore] = useState(2000); // IGT は初期所持金 $2000
+  const [flash, setFlash] = useState<{ deckIdx: number; gain: number; penalty: number } | null>(null);
   const finishedRef = useRef(false);
 
   const finish = (allPicks: number[], finalScore: number) => {
@@ -31,22 +109,21 @@ export const CardDecks = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
 
   const handlePick = (deckIdx: number) => {
     if (flash) return;
-    const deck = DECKS[deckIdx];
-    let gain = deck.reward;
-    if (Math.random() < deck.punishProb) {
-      gain += deck.punishMean;
-    }
+    const counter = pickCounters[deckIdx] ?? 0;
+    const card = decksRef.current[deckIdx][counter];
+    const gain = card.reward + card.penalty;
     const nextScore = score + gain;
     const nextPicks = [...picks, deckIdx];
     setScore(nextScore);
     setPicks(nextPicks);
-    setFlash({ deckIdx, gain });
+    setPickCounters({ ...pickCounters, [deckIdx]: counter + 1 });
+    setFlash({ deckIdx, gain: card.reward, penalty: card.penalty });
     window.setTimeout(() => {
       setFlash(null);
       if (nextPicks.length >= TOTAL_PICKS) {
         finish(nextPicks, nextScore);
       }
-    }, 700);
+    }, 900);
   };
 
   const counts = useMemo(() => {
@@ -58,49 +135,54 @@ export const CardDecks = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
   return (
     <GameShell
       title="カード山引き"
-      description="4つの山から好きな山を引く。当たり外れの傾向を見つけよう。"
+      description="4つの山から好きな山を引く。良い山を見つけよう（最初の所持金は2000）。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}
       progress={{ current: picks.length, total: TOTAL_PICKS }}
       footer={
         <div className="text-center">
-          <div className="text-xs text-slate-500">現在のスコア</div>
+          <div className="text-xs text-slate-500">現在の所持金</div>
           <div
             className={`text-3xl font-black tabular-nums ${
-              score >= 0 ? 'text-emerald-700' : 'text-red-600'
+              score >= 2000 ? 'text-emerald-700' : 'text-red-600'
             }`}
           >
-            {score >= 0 ? `+${score}` : score}
+            ${score}
+          </div>
+          <div className="text-[10px] text-slate-500 mt-0.5">
+            開始時 $2000 → 増やそう
           </div>
         </div>
       }
     >
       <div className="grid grid-cols-4 gap-2">
-        {DECKS.map((d, i) => (
+        {DECK_NAMES.map((name, i) => (
           <button
-            key={d.name}
+            key={name}
             onClick={() => handlePick(i)}
             disabled={!!flash}
             className={`relative aspect-[2/3] rounded-xl border-2 border-slate-300 ${COLORS[i]} flex flex-col items-center justify-center font-black text-3xl active:scale-95 transition disabled:opacity-50`}
           >
-            <span className="text-white drop-shadow">{d.name}</span>
+            <span className="text-white drop-shadow">{name}</span>
             <span className="text-[10px] text-slate-700 absolute bottom-1 font-normal">
               {counts[i]}回
             </span>
             {flash?.deckIdx === i && (
-              <span
-                className={`absolute inset-0 flex items-center justify-center text-2xl font-bold ${
-                  flash.gain >= 0 ? 'text-emerald-900 bg-emerald-100/80' : 'text-red-900 bg-red-100/80'
-                }`}
-              >
-                {flash.gain >= 0 ? `+${flash.gain}` : flash.gain}
-              </span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-sm font-bold bg-white/85 rounded-xl">
+                <span className="text-emerald-700">+${flash.gain}</span>
+                {flash.penalty < 0 && (
+                  <span className="text-red-700">{flash.penalty}</span>
+                )}
+                <span className={`text-base mt-1 ${flash.gain + flash.penalty >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>
+                  {flash.gain + flash.penalty >= 0 ? `+${flash.gain + flash.penalty}` : flash.gain + flash.penalty}
+                </span>
+              </div>
             )}
           </button>
         ))}
       </div>
       <p className="mt-3 text-[11px] text-slate-500 text-center">
-        山によって報酬と罰金の確率が違います。良い山を見つけよう。
+        山によって報酬と罰金のパターンが違います。試しながら良い山を見つけよう。
       </p>
     </GameShell>
   );

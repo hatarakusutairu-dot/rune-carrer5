@@ -1,16 +1,45 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
 
-const TOTAL_BALLOONS = 6;
-const PUMP_VALUE = 1; // 1ポンプ = 1pt
-const POP_BASE_PROB = 0.03; // 1ポンプ目から徐々に上がる
-const POP_PROB_GROWTH = 0.018;
+// 本物の Balloon Analogue Risk Task (BART) モデル
+// - 各風船には隠された「爆発点」K がある（一様分布）
+// - ポンプごとに pumps == K になったら確定爆発
+// - 等価な確率モデル：j回目のポンプで爆発する確率は 1/(maxPossible - j + 1)
+// - 結果として、ポンプを重ねるほど次の爆発確率は上がるが、各風船の運命は事前に決まっている
 
-const colors = ['bg-red-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-400', 'bg-purple-400', 'bg-pink-400'];
+const TOTAL_BALLOONS = 6;
+// 風船ごとに最小〜最大ポンプ数を変える（学術版BARTは128だが教育用に短縮）
+const POP_RANGE: Array<[number, number]> = [
+  [4, 12],   // やや簡単
+  [6, 20],
+  [8, 24],
+  [5, 16],
+  [10, 28],
+  [7, 22],
+];
+const PUMP_VALUE = 1;
+
+const colors = [
+  'bg-red-400',
+  'bg-yellow-400',
+  'bg-blue-400',
+  'bg-green-400',
+  'bg-purple-400',
+  'bg-pink-400',
+];
+
+const drawPopPoint = (min: number, max: number): number =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
 
 export const BalloonRisk = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
+  // 各風船の隠された爆発点
+  const popPoints = useMemo(
+    () => POP_RANGE.slice(0, TOTAL_BALLOONS).map(([min, max]) => drawPopPoint(min, max)),
+    []
+  );
+
   const [balloonIdx, setBalloonIdx] = useState(0);
   const [pumps, setPumps] = useState<number[]>([]);
   const [popped, setPopped] = useState<boolean[]>([]);
@@ -19,11 +48,7 @@ export const BalloonRisk = ({ startedAtMs, durationMs, onComplete }: GameProps) 
   const [showResult, setShowResult] = useState<'banked' | 'popped' | null>(null);
   const finishedRef = useRef(false);
 
-  const finish = (
-    p: number[],
-    pp: boolean[],
-    b: number[]
-  ) => {
+  const finish = (p: number[], pp: boolean[], b: number[]) => {
     if (finishedRef.current) return;
     finishedRef.current = true;
     onComplete({ kind: 'balloon', pumps: p, popped: pp, banked: b });
@@ -44,9 +69,9 @@ export const BalloonRisk = ({ startedAtMs, durationMs, onComplete }: GameProps) 
   const handlePump = () => {
     if (showResult) return;
     const next = currentPumps + 1;
-    const popProb = POP_BASE_PROB + POP_PROB_GROWTH * (next - 1);
-    if (Math.random() < popProb) {
-      // 割れた
+    const popPoint = popPoints[balloonIdx];
+    if (next >= popPoint) {
+      // 爆発確定（事前に決まっている爆発点に到達）
       const np = [...pumps, next];
       const npp = [...popped, true];
       const nb = [...banked, 0];
@@ -73,21 +98,29 @@ export const BalloonRisk = ({ startedAtMs, durationMs, onComplete }: GameProps) 
   };
 
   const totalBank = banked.reduce((a, b) => a + b, 0);
-  const balloonSize = Math.min(280, 80 + currentPumps * 12);
+  const balloonSize = Math.min(280, 80 + currentPumps * 8);
 
   return (
     <GameShell
       title="風船リスク"
-      description="タップで膨らます／STOPで確定。割れたら0pt。"
+      description="ふくらますほど高得点。でも割れたら0。各風船には限界がある（毎回違う）。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}
       progress={{ current: balloonIdx + 1, total: TOTAL_BALLOONS }}
+      footer={
+        <div className="grid grid-cols-2 gap-2 text-center text-xs">
+          <div className="rounded-lg bg-slate-50 p-2">
+            <div className="text-slate-500">この風船</div>
+            <div className="text-xl font-black tabular-nums">{currentPumps}pt</div>
+          </div>
+          <div className="rounded-lg bg-emerald-50 p-2">
+            <div className="text-emerald-700">これまで合計</div>
+            <div className="text-xl font-black text-emerald-800 tabular-nums">{totalBank}pt</div>
+          </div>
+        </div>
+      }
     >
-      <div className="text-xs text-slate-600 flex justify-between">
-        <span>このバルーン：{currentPumps}pt</span>
-        <span>これまで合計：{totalBank}pt</span>
-      </div>
-      <div className="flex justify-center items-end h-72 mt-4 relative">
+      <div className="flex justify-center items-end h-72 mt-2 relative">
         {showResult === 'popped' ? (
           <div className="text-7xl">💥</div>
         ) : showResult === 'banked' ? (
