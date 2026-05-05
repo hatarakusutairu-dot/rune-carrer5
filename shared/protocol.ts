@@ -96,6 +96,7 @@ export type ClientMsg =
   // 生徒
   | { type: 'S_PEEK'; code: string }
   | { type: 'S_JOIN'; code: string; className: string; sid?: string }
+  | { type: 'S_QUEST'; growSkill: string; gameAction: string; schoolAction: string }
   | { type: 'S_ANSWER'; gameId: GameId; payload: AnswerPayload }
   | { type: 'S_RETRY'; gameId: GameId }
   // 共通
@@ -121,9 +122,27 @@ export type ServerMsg =
   | { type: 'STATE'; state: PublicRoomState }
   | { type: 'PHASE_CHANGE'; state: PublicRoomState }
   | { type: 'STUDENT_COUNT'; total: number; perClass: Record<string, number> }
-  | { type: 'PROGRESS'; gameId: GameId; count: number; total: number; perClass: Record<string, number> }
+  | {
+      type: 'PROGRESS';
+      gameId: GameId;
+      count: number;
+      total: number;
+      perClass: Record<string, number>;
+      // 累積スコアから算出した、現時点でのクラス別最多タイプ（任意）
+      perClassTopType?: Record<string, SeedType | null>;
+    }
   | { type: 'AGGREGATION'; result: AggregationResult }
   | { type: 'STAGE_SUMMARY'; perClass: PerClassAggregation[]; overall: AggregationResult['overall'] }
+  | {
+      type: 'QUEST_AGG';
+      total: number;
+      perClass: Record<string, number>;
+      growSkillCounts: Record<string, number>;
+      gameActionCounts: Record<string, number>;
+      schoolActionCounts: Record<string, number>;
+      // 匿名サンプル（最大20件）
+      samples: Array<{ className: string; growSkill: string; gameAction: string; schoolAction: string }>;
+    }
   | { type: 'REACTION_BURST'; emoji: ReactionEmoji; ts: number }
   | { type: 'ERROR'; code: string; message: string }
   | { type: 'PONG' };

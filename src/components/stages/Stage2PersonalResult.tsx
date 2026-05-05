@@ -31,7 +31,28 @@ export const Stage2PersonalResult = () => {
         <h2 className="mt-1 text-xl sm:text-2xl font-black text-slate-900">
           あなたの強みの芽
         </h2>
-        <p className="mt-2 text-sm text-slate-700">
+
+        {/* 一言タイプ見出し */}
+        {result.topTypes.length > 0 && (
+          <div className="mt-4 rounded-2xl bg-white border-2 border-emerald-300 p-5 text-center">
+            <div className="text-xs text-emerald-700 font-semibold">今日のあなたは</div>
+            <div className="mt-1 flex items-center justify-center gap-2 text-3xl sm:text-4xl font-black text-emerald-900">
+              <span>{SEED_TYPE_INFO[result.topTypes[0]].emoji}</span>
+              <span>{SEED_TYPE_INFO[result.topTypes[0]].label.replace('の芽', '')}型</span>
+            </div>
+            {result.topTypes[1] && (
+              <div className="mt-2 text-sm text-slate-600">
+                次に強かったのは{' '}
+                <span className="font-bold text-slate-800">
+                  {SEED_TYPE_INFO[result.topTypes[1]].emoji}{' '}
+                  {SEED_TYPE_INFO[result.topTypes[1]].label.replace('の芽', '')}型
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <p className="mt-3 text-sm text-slate-700">
           {result.played}個のゲームから見えた、今日のあなたの傾向です。
           <br />
           <span className="text-xs text-slate-500">

@@ -43,7 +43,7 @@ const generateQuestion = (): Question => {
   };
 };
 
-const TOTAL = 8;
+const TOTAL = 12;
 
 export const PatternMatch = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
   const questions = useMemo(() => Array.from({ length: TOTAL }, () => generateQuestion()), []);

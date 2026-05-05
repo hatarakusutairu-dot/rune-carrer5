@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import type { SeedType } from '@shared/protocol';
 import { useSync } from '@/contexts/SyncContext';
+import { SEED_TYPE_INFO } from '@/content/seedTypeDescriptions';
 
 const useRemainingSec = (startedAtMs: number | null, durationMs: number | null): number | null => {
   const [now, setNow] = useState(Date.now());
@@ -67,15 +69,26 @@ export const LiveProgress = () => {
             const classDone = progress.perClass[cls] ?? 0;
             const r = classTotal > 0 ? classDone / classTotal : 0;
             const classDoneAll = classTotal > 0 && classDone >= classTotal;
+            const topType = progress.perClassTopType[cls] as SeedType | null | undefined;
+            const topInfo = topType ? SEED_TYPE_INFO[topType] : null;
             return (
               <div key={cls}>
-                <div className="flex items-baseline justify-between text-xs">
+                <div className="flex items-baseline justify-between text-xs gap-2 flex-wrap">
                   <span className="font-medium text-slate-700">
                     {cls} {classDoneAll && <span className="text-emerald-600">✓</span>}
                   </span>
-                  <span className="text-slate-500 tabular-nums">
-                    {classDone}/{classTotal}
-                  </span>
+                  <div className="flex items-baseline gap-2">
+                    {topInfo && (
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${topInfo.color}`}
+                      >
+                        現時点：{topInfo.emoji} {topInfo.label}
+                      </span>
+                    )}
+                    <span className="text-slate-500 tabular-nums">
+                      {classDone}/{classTotal}
+                    </span>
+                  </div>
                 </div>
                 <div className="mt-0.5 h-2 rounded-full bg-slate-100 overflow-hidden">
                   <div

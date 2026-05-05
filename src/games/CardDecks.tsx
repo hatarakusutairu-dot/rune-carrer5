@@ -13,7 +13,7 @@ const DECKS = [
 ];
 const COLORS = ['bg-red-300', 'bg-blue-300', 'bg-green-300', 'bg-purple-300'];
 
-const TOTAL_PICKS = 30;
+const TOTAL_PICKS = 50;
 
 export const CardDecks = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
   const [picks, setPicks] = useState<number[]>([]);

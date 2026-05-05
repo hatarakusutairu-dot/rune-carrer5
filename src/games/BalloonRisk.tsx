@@ -3,12 +3,12 @@ import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
 
-const TOTAL_BALLOONS = 3;
+const TOTAL_BALLOONS = 6;
 const PUMP_VALUE = 1; // 1ポンプ = 1pt
-const POP_BASE_PROB = 0.04; // 1ポンプ目から徐々に上がる
-const POP_PROB_GROWTH = 0.02;
+const POP_BASE_PROB = 0.03; // 1ポンプ目から徐々に上がる
+const POP_PROB_GROWTH = 0.018;
 
-const colors = ['bg-red-400', 'bg-yellow-400', 'bg-blue-400'];
+const colors = ['bg-red-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-400', 'bg-purple-400', 'bg-pink-400'];
 
 export const BalloonRisk = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
   const [balloonIdx, setBalloonIdx] = useState(0);

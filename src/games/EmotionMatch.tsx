@@ -15,7 +15,7 @@ const EMOTIONS = [
   { key: 'disgust', label: '嫌悪', emoji: '😖' },
 ] as const;
 
-const TOTAL = 8;
+const TOTAL = 12;
 
 interface Q {
   emoji: string;
@@ -24,8 +24,13 @@ interface Q {
 }
 
 const buildQuestions = (): Q[] => {
-  const shuffled = [...EMOTIONS].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, TOTAL).map((e) => {
+  // 8感情を1.5倍出すため、シャッフル＆折返しで12問つくる
+  const base = [...EMOTIONS].sort(() => Math.random() - 0.5);
+  const list: Array<(typeof EMOTIONS)[number]> = [];
+  while (list.length < TOTAL) {
+    list.push(...base);
+  }
+  return list.slice(0, TOTAL).map((e) => {
     // 4択：正解 + 3個ダミー
     const distractors = EMOTIONS.filter((x) => x.key !== e.key)
       .sort(() => Math.random() - 0.5)

@@ -3,7 +3,7 @@ import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
 
-const TOTAL_TRIALS = 30;
+const TOTAL_TRIALS = 50;
 const STOP_RATE = 0.3; // 30%は赤（押してはいけない）
 
 interface Trial {

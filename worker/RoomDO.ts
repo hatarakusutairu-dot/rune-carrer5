@@ -52,6 +52,8 @@ interface InternalState {
   personalScores: Map<string, Record<SeedType, number>>;
   // クラス別sid（クラス→sid集合）
   classSids: Map<string, Set<string>>;
+  // クエストカード（sid → 内容）
+  questCards: Map<string, { growSkill: string; gameAction: string; schoolAction: string }>;
 }
 
 interface SerializedState {
@@ -68,6 +70,7 @@ interface SerializedState {
   answers: Array<[GameId, Array<[string, AnswerPayload]>]>;
   personalScores: Array<[string, Record<SeedType, number>]>;
   classSids: Array<[string, string[]]>;
+  questCards: Array<[string, { growSkill: string; gameAction: string; schoolAction: string }]>;
 }
 
 const serializeState = (s: InternalState): SerializedState => ({
@@ -84,6 +87,7 @@ const serializeState = (s: InternalState): SerializedState => ({
   answers: Array.from(s.answers.entries()).map(([k, v]) => [k, Array.from(v.entries())]),
   personalScores: Array.from(s.personalScores.entries()),
   classSids: Array.from(s.classSids.entries()).map(([k, v]) => [k, Array.from(v)]),
+  questCards: Array.from(s.questCards.entries()),
 });
 
 const deserializeState = (o: SerializedState): InternalState => ({
@@ -100,6 +104,7 @@ const deserializeState = (o: SerializedState): InternalState => ({
   answers: new Map((o.answers ?? []).map(([k, v]) => [k, new Map(v)])),
   personalScores: new Map(o.personalScores ?? []),
   classSids: new Map((o.classSids ?? []).map(([k, v]) => [k, new Set(v)])),
+  questCards: new Map(o.questCards ?? []),
 });
 
 const generateToken = (): string => {
@@ -159,6 +164,7 @@ export class RoomDO extends DurableObject<Env> {
       answers: new Map(),
       personalScores: new Map(),
       classSids: new Map(),
+      questCards: new Map(),
     };
   }
 
@@ -238,6 +244,7 @@ export class RoomDO extends DurableObject<Env> {
       case 'T_RESUME':
         return false;
       default:
+        // T_*, S_ANSWER, S_QUEST など
         return true;
     }
   }
@@ -300,6 +307,9 @@ export class RoomDO extends DurableObject<Env> {
 
       case 'S_ANSWER':
         return this.sAnswer(ws, msg.gameId, msg.payload);
+
+      case 'S_QUEST':
+        return this.sQuest(ws, msg.growSkill, msg.gameAction, msg.schoolAction);
 
       case 'S_RETRY':
         // 再挑戦：集計には影響しない、クライアント側で再表示するためのフラグ通知のみ
@@ -483,6 +493,55 @@ export class RoomDO extends DurableObject<Env> {
     this.broadcastStudentCount();
   }
 
+  private sQuest(ws: WebSocket, growSkill: string, gameAction: string, schoolAction: string): void {
+    const att = this.getAttachment(ws);
+    if (att?.role !== 'student') {
+      this.sendErr(ws, 'NOT_STUDENT', '生徒のみ送信できます');
+      return;
+    }
+    // テキストの長さ制限（個人情報混入防止）
+    const trim = (s: string, max: number) => s.trim().slice(0, max);
+    this.state.questCards.set(att.sid, {
+      growSkill: trim(growSkill, 30),
+      gameAction: trim(gameAction, 40),
+      schoolAction: trim(schoolAction, 40),
+    });
+    this.broadcastQuestAggregation();
+  }
+
+  private broadcastQuestAggregation(): void {
+    const cards = Array.from(this.state.questCards.entries());
+    const perClass: Record<string, number> = {};
+    const growCount: Record<string, number> = {};
+    const gameCount: Record<string, number> = {};
+    const schoolCount: Record<string, number> = {};
+    const samples: Array<{ className: string; growSkill: string; gameAction: string; schoolAction: string }> = [];
+
+    for (const cls of this.state.classes) perClass[cls] = 0;
+
+    for (const [sid, card] of cards) {
+      const info = this.state.students.get(sid);
+      const cls = info?.className ?? '不明';
+      perClass[cls] = (perClass[cls] ?? 0) + 1;
+      growCount[card.growSkill] = (growCount[card.growSkill] ?? 0) + 1;
+      gameCount[card.gameAction] = (gameCount[card.gameAction] ?? 0) + 1;
+      schoolCount[card.schoolAction] = (schoolCount[card.schoolAction] ?? 0) + 1;
+      if (samples.length < 20) {
+        samples.push({ className: cls, ...card });
+      }
+    }
+
+    this.broadcast({
+      type: 'QUEST_AGG',
+      total: cards.length,
+      perClass,
+      growSkillCounts: growCount,
+      gameActionCounts: gameCount,
+      schoolActionCounts: schoolCount,
+      samples,
+    });
+  }
+
   private sAnswer(ws: WebSocket, gameId: GameId, payload: AnswerPayload): void {
     const att = this.getAttachment(ws);
     if (att?.role !== 'student') {
@@ -642,12 +701,27 @@ export class RoomDO extends DurableObject<Env> {
       const info = this.state.students.get(sid);
       if (info) perClass[info.className] = (perClass[info.className] ?? 0) + 1;
     }
+    // 累積スコアからクラス別の現時点トップタイプを算出
+    const perClassScores = new Map<string, Array<Record<SeedType, number>>>();
+    for (const [sid, score] of this.state.personalScores) {
+      const info = this.state.students.get(sid);
+      if (!info) continue;
+      const arr = perClassScores.get(info.className) ?? [];
+      arr.push(score);
+      perClassScores.set(info.className, arr);
+    }
+    const perClassTopType: Record<string, SeedType | null> = {};
+    for (const cls of this.state.classes) {
+      const arr = perClassScores.get(cls) ?? [];
+      perClassTopType[cls] = arr.length > 0 ? topType(aggregateScores(arr)) : null;
+    }
     this.broadcast({
       type: 'PROGRESS',
       gameId,
       count: map.size,
       total: this.state.students.size,
       perClass,
+      perClassTopType,
     });
   }
 

@@ -43,12 +43,22 @@ interface SyncContextValue {
   // 集計
   lastAggregation: AggregationResult | null;
   stageSummary: { perClass: PerClassAggregation[]; overall: AggregationResult['overall'] } | null;
+  // クエストカード集計
+  questAgg: {
+    total: number;
+    perClass: Record<string, number>;
+    growSkillCounts: Record<string, number>;
+    gameActionCounts: Record<string, number>;
+    schoolActionCounts: Record<string, number>;
+    samples: Array<{ className: string; growSkill: string; gameAction: string; schoolAction: string }>;
+  } | null;
   // 進捗（PROGRESSメッセージから）
   progress: {
     gameId: string | null;
     count: number;
     total: number;
     perClass: Record<string, number>;
+    perClassTopType: Record<string, string | null>;
   };
   // リアクション
   reactionBursts: ReactionBurst[];
@@ -82,11 +92,13 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   );
   const [lastAggregation, setLastAggregation] = useState<AggregationResult | null>(null);
   const [stageSummary, setStageSummary] = useState<SyncContextValue['stageSummary']>(null);
+  const [questAgg, setQuestAgg] = useState<SyncContextValue['questAgg']>(null);
   const [progress, setProgress] = useState<SyncContextValue['progress']>({
     gameId: null,
     count: 0,
     total: 0,
     perClass: {},
+    perClassTopType: {},
   });
   const [reactionBursts, setReactionBursts] = useState<ReactionBurst[]>([]);
   const [lastError, setLastError] = useState<SyncContextValue['lastError']>(null);
@@ -128,6 +140,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
           count: msg.count,
           total: msg.total,
           perClass: msg.perClass,
+          perClassTopType: msg.perClassTopType ?? {},
         });
         break;
       case 'AGGREGATION':
@@ -135,6 +148,16 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         break;
       case 'STAGE_SUMMARY':
         setStageSummary({ perClass: msg.perClass, overall: msg.overall });
+        break;
+      case 'QUEST_AGG':
+        setQuestAgg({
+          total: msg.total,
+          perClass: msg.perClass,
+          growSkillCounts: msg.growSkillCounts,
+          gameActionCounts: msg.gameActionCounts,
+          schoolActionCounts: msg.schoolActionCounts,
+          samples: msg.samples,
+        });
         break;
       case 'REACTION_BURST': {
         const id = `${msg.ts}-${Math.random().toString(36).slice(2, 8)}`;
@@ -234,6 +257,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     setMyClass(null);
     setLastAggregation(null);
     setStageSummary(null);
+    setQuestAgg(null);
     setReactionBursts([]);
     setLastError(null);
     sessionStorage.removeItem(TEACHER_TOKEN_KEY);
@@ -270,6 +294,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       myClass,
       lastAggregation,
       stageSummary,
+      questAgg,
       progress,
       reactionBursts,
       createRoom,
@@ -290,6 +315,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       myClass,
       lastAggregation,
       stageSummary,
+      questAgg,
       progress,
       reactionBursts,
       createRoom,

@@ -18,6 +18,7 @@ import { Stage3Share } from '@/components/stages/Stage3Share';
 import { Stage4Reveal } from '@/components/stages/Stage4Reveal';
 import { Stage5SkillLink } from '@/components/stages/Stage5SkillLink';
 import { Stage6QuestCard } from '@/components/stages/Stage6QuestCard';
+import { QuestAggregation } from '@/components/teacher/QuestAggregation';
 import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
 
 export const TeacherRoute = () => {
@@ -57,7 +58,12 @@ export const TeacherRoute = () => {
             {phase === 'lobby' && stage === 3 && <Stage3Share variant="teacher" />}
             {phase === 'lobby' && stage === 4 && <Stage4Reveal variant="teacher" />}
             {phase === 'lobby' && stage === 5 && <Stage5SkillLink variant="teacher" />}
-            {phase === 'lobby' && stage === 6 && <Stage6QuestCard variant="teacher" />}
+            {phase === 'lobby' && stage === 6 && (
+              <>
+                <Stage6QuestCard variant="teacher" />
+                <QuestAggregation />
+              </>
+            )}
 
             {/* intro時：カウントダウン大表示 */}
             {phase === 'intro' && state.introCountdownAt !== null && (
@@ -102,14 +108,6 @@ export const TeacherRoute = () => {
               perClassCount={state.perClassCount}
               totalStudents={state.totalStudents}
             />
-            <div className="rounded-2xl bg-white border border-slate-200 p-4 text-xs text-slate-600">
-              <div className="font-semibold text-sm text-slate-700 mb-2">講師メモ</div>
-              <ul className="list-disc list-inside space-y-1">
-                <li>正解を出すゲームではないと最初に伝える</li>
-                <li>Stage 4で「実は採用で使われている」と種明かし</li>
-                <li>少数派タイプには「貴重な存在」とフォロー</li>
-              </ul>
-            </div>
             <Button
               variant="ghost"
               onClick={() => {

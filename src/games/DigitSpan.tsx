@@ -5,8 +5,8 @@ import { useTimeoutOnce } from './_useTimer';
 
 const SHOW_MS = 2000;
 const STARTING_LEN = 3;
-const MAX_LEN = 8;
-const TRIALS_PER_LEN = 1;
+const MAX_LEN = 9;
+const TRIALS_PER_LEN = 2; // 各桁数で2回トライ。1回でも正解で次の桁へ、2回連続失敗で終了
 
 const generateDigits = (len: number): string => {
   let s = '';
@@ -19,6 +19,7 @@ type Phase = 'show' | 'input' | 'feedback';
 export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
   const [len, setLen] = useState(STARTING_LEN);
   const [trial, setTrial] = useState(0);
+  const [trialResults, setTrialResults] = useState<boolean[]>([]); // この桁数の結果
   const [digits, setDigits] = useState<string>(() => generateDigits(STARTING_LEN));
   const [phase, setPhase] = useState<Phase>('show');
   const [input, setInput] = useState('');
@@ -49,9 +50,11 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
     const newCorrect = correct + (isRight ? 1 : 0);
     const newTotal = total + 1;
     const newMaxLen = isRight ? Math.max(maxLen, len) : maxLen;
+    const updatedResults = [...trialResults, isRight];
     setCorrect(newCorrect);
     setTotal(newTotal);
     setMaxLen(newMaxLen);
+    setTrialResults(updatedResults);
     setFeedback(isRight ? 'right' : 'wrong');
     setPhase('feedback');
 
@@ -59,9 +62,12 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
       setFeedback(null);
       setInput('');
       const nextTrial = trial + 1;
-      if (nextTrial >= TRIALS_PER_LEN) {
-        const nextLen = isRight ? len + 1 : len;
-        if (!isRight || nextLen > MAX_LEN) {
+      const anyCorrect = updatedResults.some(Boolean);
+
+      // 1回正解で即次の桁へ
+      if (isRight) {
+        const nextLen = len + 1;
+        if (nextLen > MAX_LEN) {
           finishedRef.current = true;
           onComplete({
             kind: 'digit_span',
@@ -73,8 +79,43 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
         }
         setLen(nextLen);
         setTrial(0);
+        setTrialResults([]);
+        setDigits(generateDigits(nextLen));
+        setPhase('show');
+        return;
+      }
+
+      // 不正解：2回試行できる
+      if (nextTrial >= TRIALS_PER_LEN) {
+        // 2回とも失敗 → 終了（その桁は到達せず）
+        if (!anyCorrect) {
+          finishedRef.current = true;
+          onComplete({
+            kind: 'digit_span',
+            correct: newCorrect,
+            total: newTotal,
+            maxLen: newMaxLen,
+          });
+          return;
+        }
+        // 1回成功してたなら次の桁
+        const nextLen = len + 1;
+        if (nextLen > MAX_LEN) {
+          finishedRef.current = true;
+          onComplete({
+            kind: 'digit_span',
+            correct: newCorrect,
+            total: newTotal,
+            maxLen: newMaxLen,
+          });
+          return;
+        }
+        setLen(nextLen);
+        setTrial(0);
+        setTrialResults([]);
         setDigits(generateDigits(nextLen));
       } else {
+        // もう1回試行
         setTrial(nextTrial);
         setDigits(generateDigits(len));
       }
@@ -88,7 +129,7 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
       description="数字を覚えて入力。覚えた桁数までチャレンジ。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}
-      progress={{ current: total + 1, total: MAX_LEN - STARTING_LEN + 2 }}
+      progress={{ current: len, total: MAX_LEN }}
     >
       {phase === 'show' && (
         <div className="py-10 text-center">

@@ -3,6 +3,7 @@ import { Button } from '@/components/common/Button';
 import { computeMyCumulative } from '@/lib/cumulativeScore';
 import { loadQuestCard, saveQuestCard } from '@/lib/questCard';
 import { SEED_TYPE_INFO } from '@/content/seedTypeDescriptions';
+import { useSync } from '@/contexts/SyncContext';
 
 const GROW_SKILLS = [
   'コミュニケーション力',
@@ -81,6 +82,7 @@ const TeacherView = () => (
 );
 
 const StudentView = () => {
+  const { send } = useSync();
   const [growSkill, setGrowSkill] = useState('');
   const [gameAction, setGameAction] = useState('');
   const [schoolAction, setSchoolAction] = useState('');
@@ -105,6 +107,7 @@ const StudentView = () => {
   const submit = () => {
     if (!growSkill || !gameAction || !schoolAction) return;
     saveQuestCard({ growSkill, gameAction, schoolAction });
+    send({ type: 'S_QUEST', growSkill, gameAction, schoolAction });
     setSaved({ growSkill, gameAction, schoolAction, savedAt: new Date().toISOString() });
     setEditing(false);
   };
