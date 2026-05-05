@@ -1,10 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useSync, ReactionBurst } from '@/contexts/SyncContext';
+import { ImageWithFallback } from '@/components/common/ImageWithFallback';
+import type { ReactionEmoji } from '@shared/protocol';
 
 interface FloatingReaction extends ReactionBurst {
   x: number; // 0-100 (vw%)
   fromLeft: boolean;
 }
+
+const REACTION_KEY: Record<ReactionEmoji, string> = {
+  '👍': 'thumbs',
+  '❤️': 'heart',
+  '😂': 'laugh',
+  '😮': 'surprise',
+  '🌱': 'sprout',
+  '🔥': 'fire',
+  '👏': 'clap',
+  '🎉': 'party',
+};
 
 export const ReactionStream = () => {
   const { reactionBursts } = useSync();
@@ -37,13 +50,19 @@ export const ReactionStream = () => {
       {floats.map((f) => (
         <div
           key={f.id}
-          className="absolute bottom-10 text-5xl sm:text-6xl select-none"
+          className="absolute bottom-10 select-none"
           style={{
             left: `${f.x}%`,
             animation: 'floatUp 2.6s ease-out both',
           }}
         >
-          {f.emoji}
+          <ImageWithFallback
+            src={`/img/reaction-${REACTION_KEY[f.emoji]}.png`}
+            fallback={f.emoji}
+            alt=""
+            imgClassName="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+            fallbackClassName="text-5xl sm:text-6xl leading-none"
+          />
         </div>
       ))}
     </div>

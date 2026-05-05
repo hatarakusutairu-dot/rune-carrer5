@@ -1,3 +1,5 @@
+import { DecorImage } from '@/components/common/DecorImage';
+
 interface WaitingSceneProps {
   variant?: 'answered' | 'results';
   total?: number;
@@ -44,6 +46,12 @@ export const WaitingScene = ({ variant = 'answered', total, done }: WaitingScene
           </span>
         ))}
       </div>
+
+      <DecorImage
+        src="/img/waiting-scene.png"
+        alt=""
+        className="block w-full h-auto rounded-xl mb-3 max-h-40 object-cover"
+      />
 
       <div className="relative text-center py-2">
         <div

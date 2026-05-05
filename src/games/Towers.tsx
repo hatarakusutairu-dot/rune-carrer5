@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
+import { DecorImage } from '@/components/common/DecorImage';
 
 // ハノイの塔風の計画力課題
 // - 3つの杭、N個の円盤
@@ -168,7 +169,7 @@ export const Towers = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
           <button
             key={pegIdx}
             onClick={() => handleTap(pegIdx)}
-            className={`h-full flex flex-col-reverse items-center pb-2 rounded-xl border-2 transition relative ${
+            className={`h-full flex flex-col-reverse items-center pb-2 rounded-xl border-2 transition relative overflow-hidden ${
               selected === pegIdx
                 ? 'border-amber-500 bg-amber-50'
                 : pegIdx === puzzle.goalPeg
@@ -176,16 +177,18 @@ export const Towers = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
                   : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
             }`}
           >
+            {/* 杭画像（あれば後ろに表示） */}
+            <DecorImage
+              src="/img/tower-peg.png"
+              alt=""
+              className="absolute left-1/2 -translate-x-1/2 top-6 bottom-2 h-[calc(100%-2rem)] w-auto pointer-events-none"
+            />
             {/* 杭ラベル */}
-            <div className="absolute top-1 left-1/2 -translate-x-1/2 text-[10px] text-slate-500">
+            <div className="absolute top-1 left-1/2 -translate-x-1/2 text-[10px] text-slate-500 z-10">
               {pegIdx === puzzle.goalPeg ? '🎯 ゴール' : pegIdx === puzzle.startPeg ? 'スタート' : ''}
             </div>
             {pegs[pegIdx].map((disk, i) => (
-              <div
-                key={i}
-                className={`${DISK_COLORS[disk - 1]} rounded shadow my-0.5 transition-all`}
-                style={{ width: `${20 + disk * 15}%`, height: '14px' }}
-              />
+              <Disk key={i} disk={disk} />
             ))}
           </button>
         ))}
@@ -210,4 +213,28 @@ const initialPegs = (puzzle: { disks: number; startPeg: 0 | 1 | 2 }): number[][]
   // 大きい円盤を下、小さい円盤を上
   for (let i = puzzle.disks; i >= 1; i--) pegs[puzzle.startPeg].push(i);
   return pegs;
+};
+
+// 円盤：画像があれば表示、無ければ色付き帯（既存挙動）
+const Disk = ({ disk }: { disk: number }) => {
+  const [failed, setFailed] = useState(false);
+  const widthPct = 20 + disk * 15;
+  if (failed) {
+    return (
+      <div
+        className={`${DISK_COLORS[disk - 1]} rounded shadow my-0.5 transition-all relative z-10`}
+        style={{ width: `${widthPct}%`, height: '14px' }}
+      />
+    );
+  }
+  return (
+    <img
+      src={`/img/tower-disk-${disk}.png`}
+      alt=""
+      className="my-0.5 transition-all relative z-10 select-none"
+      style={{ width: `${widthPct}%`, height: 'auto' }}
+      draggable={false}
+      onError={() => setFailed(true)}
+    />
+  );
 };

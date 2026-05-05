@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
+import { ImageWithFallback } from '@/components/common/ImageWithFallback';
 
 // Knack の Wasabi Waiter に近い接客マルチタスク課題
 // - 客が席に到着、注文を表示
@@ -23,7 +24,10 @@ type MenuItem = (typeof MENU)[number];
 
 interface Customer {
   id: number;
-  emoji: string;     // 顔
+  customerNum: number; // 1〜8（画像 customer-1.png 等に対応）
+  happyFace: string;   // 我慢たっぷりの時の絵文字（画像が無い時のフォールバック）
+  neutralFace: string; // ふつう
+  impatientFace: string; // イライラ
   order: MenuItem;
   arrivedAt: number;
   patience: number;  // ms
@@ -39,7 +43,10 @@ let nextCustomerId = 1;
 
 const newCustomer = (now: number): Customer => ({
   id: nextCustomerId++,
-  emoji: pickRandom(FACES_HAPPY),
+  customerNum: 1 + Math.floor(Math.random() * 8),
+  happyFace: pickRandom(FACES_HAPPY),
+  neutralFace: pickRandom(FACES_NEUTRAL),
+  impatientFace: pickRandom(FACES_IMPATIENT),
   order: pickRandom(MENU),
   arrivedAt: now,
   patience: 9000 + Math.random() * 4000, // 9〜13秒
@@ -48,9 +55,9 @@ const newCustomer = (now: number): Customer => ({
 const faceFor = (customer: Customer, now: number): string => {
   const elapsed = now - customer.arrivedAt;
   const ratio = elapsed / customer.patience;
-  if (ratio < 0.5) return customer.emoji;
-  if (ratio < 0.8) return pickRandom(FACES_NEUTRAL);
-  return pickRandom(FACES_IMPATIENT);
+  if (ratio < 0.5) return customer.happyFace;
+  if (ratio < 0.8) return customer.neutralFace;
+  return customer.impatientFace;
 };
 
 export const WasabiWaiter = ({ startedAtMs, durationMs, onComplete }: GameProps) => {
@@ -186,9 +193,21 @@ export const WasabiWaiter = ({ startedAtMs, durationMs, onComplete }: GameProps)
             >
               {c ? (
                 <>
-                  <div className="text-4xl">{faceFor(c, now)}</div>
+                  <ImageWithFallback
+                    src={`/img/customer-${c.customerNum}.png`}
+                    fallback={faceFor(c, now)}
+                    alt="客"
+                    imgClassName="w-14 h-14 rounded-full object-cover"
+                    fallbackClassName="text-4xl leading-none"
+                  />
                   <div className="mt-1 text-xs font-semibold flex items-center gap-1">
-                    <span>{c.order.icon}</span>
+                    <ImageWithFallback
+                      src={`/img/food-${c.order.key}.png`}
+                      fallback={c.order.icon}
+                      alt={c.order.label}
+                      imgClassName="w-5 h-5 object-contain"
+                      fallbackClassName="text-base leading-none"
+                    />
                     <span>{c.order.label}</span>
                   </div>
                   {/* 我慢ゲージ */}
@@ -229,10 +248,16 @@ export const WasabiWaiter = ({ startedAtMs, durationMs, onComplete }: GameProps)
               key={m.key}
               onClick={() => handleServe(m.key)}
               disabled={selectedSeat === null}
-              className="rounded-lg bg-white border border-slate-200 p-2 disabled:opacity-40 active:scale-95"
+              className="rounded-lg bg-white border border-slate-200 p-2 disabled:opacity-40 active:scale-95 flex flex-col items-center"
             >
-              <div className="text-2xl">{m.icon}</div>
-              <div className="text-xs">{m.label}</div>
+              <ImageWithFallback
+                src={`/img/food-${m.key}.png`}
+                fallback={m.icon}
+                alt={m.label}
+                imgClassName="w-10 h-10 object-contain"
+                fallbackClassName="text-2xl leading-none"
+              />
+              <div className="text-xs mt-0.5">{m.label}</div>
             </button>
           ))}
         </div>
