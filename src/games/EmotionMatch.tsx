@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
+import { ImageWithFallback } from '../components/common/ImageWithFallback';
 
 // 16感情：基本8感情 + 微妙な8感情を加え、ダミーは類似ペアを優先
 // 実際の採用感情認識テストでは、似た感情を見分ける微差が重視される
@@ -41,6 +42,7 @@ const EMOTIONS: Emotion[] = [
 const TOTAL = 12;
 
 interface Q {
+  key: string;
   emoji: string;
   answer: string;
   options: string[];
@@ -62,7 +64,7 @@ const buildQuestions = (): Q[] => {
     ];
     const distractors = pool.slice(0, 3).map((x) => x.label);
     const opts = [e.label, ...distractors].sort(() => Math.random() - 0.5);
-    return { emoji: e.emoji, answer: e.label, options: opts };
+    return { key: e.key, emoji: e.emoji, answer: e.label, options: opts };
   });
 };
 
@@ -108,7 +110,13 @@ export const EmotionMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
       progress={{ current: idx + 1, total: TOTAL }}
     >
       <div className="flex justify-center py-3">
-        <div className="text-8xl">{q.emoji}</div>
+        <ImageWithFallback
+          src={`/img/emotions/${q.key}.png`}
+          fallback={q.emoji}
+          alt={q.answer}
+          imgClassName="w-32 h-32 rounded-2xl object-cover shadow-sm"
+          fallbackClassName="text-8xl leading-none"
+        />
       </div>
       <div className="grid grid-cols-2 gap-2">
         {q.options.map((label) => {
@@ -132,7 +140,7 @@ export const EmotionMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
         })}
       </div>
       <p className="mt-3 text-[11px] text-slate-500 text-center">
-        AI画像配信時はここに肖像イラストが表示されます
+        public/img/emotions/{'{key}'}.png を配置すると肖像イラストへ自動切替
       </p>
     </GameShell>
   );
