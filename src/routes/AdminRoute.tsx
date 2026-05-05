@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { AdminQuestExport } from '@/components/admin/AdminQuestExport';
+import { AdminSlides } from '@/components/admin/AdminSlides';
 
 export const AdminRoute = () => {
   return (
@@ -17,7 +18,7 @@ export const AdminRoute = () => {
         </Section>
 
         <Section title="🎞 スライド管理" tone="rose">
-          <Placeholder text="（次フェーズで実装：PNG/JPG/PDF をアップロード→講師大画面で順送り表示）" />
+          <AdminSlides />
         </Section>
 
         <Section title="🔍 配信ファイル診断" tone="slate">
