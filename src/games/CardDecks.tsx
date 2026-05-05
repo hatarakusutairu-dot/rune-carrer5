@@ -2,6 +2,9 @@ import { useMemo, useRef, useState } from 'react';
 import type { GameProps } from './types';
 import { GameShell } from './_GameShell';
 import { useTimeoutOnce } from './_useTimer';
+import { DecorImage } from '@/components/common/DecorImage';
+
+const DECK_KEYS = ['a', 'b', 'c', 'd'] as const;
 
 // 本物の Iowa Gambling Task (IGT) スケジュール
 // 各デッキは固定パターンで報酬と罰金が出る
@@ -161,14 +164,19 @@ export const CardDecks = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
             key={name}
             onClick={() => handlePick(i)}
             disabled={!!flash}
-            className={`relative aspect-[2/3] rounded-xl border-2 border-slate-300 ${COLORS[i]} flex flex-col items-center justify-center font-black text-3xl active:scale-95 transition disabled:opacity-50`}
+            className={`relative aspect-[2/3] rounded-xl border-2 border-slate-300 ${COLORS[i]} flex flex-col items-center justify-center font-black text-3xl active:scale-95 transition disabled:opacity-50 overflow-hidden`}
           >
-            <span className="text-white drop-shadow">{name}</span>
-            <span className="text-[10px] text-slate-700 absolute bottom-1 font-normal">
+            <DecorImage
+              src={`/img/card-deck-${DECK_KEYS[i]}.png`}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <span className="relative text-white drop-shadow z-10">{name}</span>
+            <span className="absolute bottom-1 text-[10px] text-slate-800 font-normal bg-white/70 rounded px-1 z-10">
               {counts[i]}回
             </span>
             {flash?.deckIdx === i && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-sm font-bold bg-white/85 rounded-xl">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-sm font-bold bg-white/85 rounded-xl z-20">
                 <span className="text-emerald-700">+${flash.gain}</span>
                 {flash.penalty < 0 && (
                   <span className="text-red-700">{flash.penalty}</span>
