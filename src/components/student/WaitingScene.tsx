@@ -1,10 +1,27 @@
-import { DecorImage } from '@/components/common/DecorImage';
+import { useState } from 'react';
 
 interface WaitingSceneProps {
   variant?: 'answered' | 'results';
   total?: number;
   done?: number;
 }
+
+// 待機シーン画像：.gif（アニメーション） → .png（静止画） → 表示なし の優先順位
+const WAITING_SOURCES = ['/img/waiting-scene.gif', '/img/waiting-scene.png'];
+
+const WaitingImage = () => {
+  const [idx, setIdx] = useState(0);
+  if (idx >= WAITING_SOURCES.length) return null;
+  return (
+    <img
+      src={WAITING_SOURCES[idx]}
+      alt=""
+      className="block w-full h-auto rounded-xl mb-3 max-h-40 object-cover"
+      draggable={false}
+      onError={() => setIdx((i) => i + 1)}
+    />
+  );
+};
 
 // 早終了組や結果待ちの生徒に出す穏やかな待機アニメ
 export const WaitingScene = ({ variant = 'answered', total, done }: WaitingSceneProps) => {
@@ -47,11 +64,7 @@ export const WaitingScene = ({ variant = 'answered', total, done }: WaitingScene
         ))}
       </div>
 
-      <DecorImage
-        src="/img/waiting-scene.png"
-        alt=""
-        className="block w-full h-auto rounded-xl mb-3 max-h-40 object-cover"
-      />
+      <WaitingImage />
 
       <div className="relative text-center py-2">
         <div

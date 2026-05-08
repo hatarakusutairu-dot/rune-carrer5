@@ -105,8 +105,9 @@ export const IMAGE_REGISTRY: ImageSlot[] = [
     })),
   ),
 
-  // 10. 待機シーン
-  { category: '待機', src: '/img/waiting-scene.png', label: '待機シーン', fallback: '🌿' },
+  // 10. 待機シーン（gif優先、png でも可）
+  { category: '待機', src: '/img/waiting-scene.gif', label: '待機シーン (GIF)', fallback: '🌿' },
+  { category: '待機', src: '/img/waiting-scene.png', label: '待機シーン (PNG・GIF無い時)', fallback: '🌿' },
 
   // 11. Towers
   { category: '塔', src: '/img/tower-peg.png', label: '杭', fallback: '🪧' },
