@@ -42,6 +42,8 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       const ratio = payload.correct / Math.max(payload.total, 1);
       s.analysis += ratio * 6 + (payload.maxLen - 3);
       s.continuity += ratio * 3;
+      // 限界桁数 5以上 = 高い記憶容量を「挑戦」と捉える
+      if (payload.maxLen >= 5) s.challenge += Math.min(3, payload.maxLen - 4);
       break;
     }
     case 'card_decks': {
@@ -60,6 +62,8 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       const ratio = payload.correct / Math.max(payload.total, 1);
       s.support += ratio * 6;
       s.balance += ratio * 3;
+      // 感情の微差を見抜けることは「分析眼」でもある
+      s.analysis += Math.max(0, (ratio - 0.5) * 6);
       break;
     }
     case 'money_split': {
@@ -72,6 +76,8 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       s.support += altruism * 6 + fairness * 2;
       s.balance += fairness * 4;
       s.leader += avgSelf > 6 ? (avgSelf - 6) * 2 : 0; // 強気は決断
+      // 強気（自分取り分多め）は「攻めの姿勢」=チャレンジでもある
+      if (avgSelf > 5.5) s.challenge += Math.min(4, (avgSelf - 5.5) * 2);
       break;
     }
     case 'stop_signal': {
@@ -106,7 +112,8 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       const accuracy = payload.served > 0 ? payload.correctOrders / payload.served : 0;
       s.support += Math.min(6, accuracy * 4 + payload.served * 0.2);
       s.balance += Math.min(4, accuracy * 5);
-      s.leader += Math.min(3, payload.served * 0.3);
+      // 多く捌けたかは「現場を回す」リーダー力
+      s.leader += Math.min(5, payload.served * 0.5);
       s.analysis += Math.min(2, accuracy * 2);
       break;
     }
