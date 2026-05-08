@@ -1,33 +1,58 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listSlides, type SlideRecord } from '@/lib/slidesDB';
+import { listSlides } from '@/lib/slidesDB';
+
+// 表示用に統一された Slide 型（デフォルトデッキ・ローカル両方）
+type DisplaySlide = {
+  url: string;
+  name: string;
+  source: 'default' | 'local';
+};
+
+const fetchDefaultDeck = async (): Promise<DisplaySlide[]> => {
+  try {
+    const res = await fetch('/slides/manifest.json', { cache: 'no-cache' });
+    if (!res.ok) return [];
+    const data: { slides?: string[] } = await res.json();
+    if (!Array.isArray(data?.slides)) return [];
+    return data.slides.map((name) => ({
+      url: `/slides/${name}`,
+      name,
+      source: 'default' as const,
+    }));
+  } catch {
+    return [];
+  }
+};
 
 export const SlidesRoute = () => {
-  const [slides, setSlides] = useState<SlideRecord[]>([]);
+  const [slides, setSlides] = useState<DisplaySlide[]>([]);
   const [idx, setIdx] = useState(0);
-  const [previews, setPreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const localUrlsRef = useRef<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    listSlides()
-      .then((list) => {
-        setSlides(list);
-        setPreviews(list.map((s) => URL.createObjectURL(s.blob)));
+    let cancelled = false;
+    Promise.all([fetchDefaultDeck(), listSlides()])
+      .then(([defaults, locals]) => {
+        if (cancelled) return;
+        const localSlides: DisplaySlide[] = locals.map((s) => {
+          const url = URL.createObjectURL(s.blob);
+          localUrlsRef.current.push(url);
+          return { url, name: s.name, source: 'local' };
+        });
+        // デフォルト先、ローカル後（ローカルは "おまけ" 扱い）
+        setSlides([...defaults, ...localSlides]);
         setLoading(false);
       })
       .catch(() => setLoading(false));
     return () => {
-      // unmount: revoke is handled in next effect via current refs; minimal cleanup here
+      cancelled = true;
+      localUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+      localUrlsRef.current = [];
     };
   }, []);
-
-  useEffect(() => {
-    return () => {
-      previews.forEach((u) => URL.revokeObjectURL(u));
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previews.length]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -65,12 +90,18 @@ export const SlidesRoute = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-8 gap-4">
         <p className="text-lg">スライドが登録されていません。</p>
+        <p className="text-xs text-white/60 max-w-md text-center leading-relaxed">
+          公式デッキ：<code className="bg-white/10 px-1 rounded">public/slides/</code> にPNG/JPGを入れて git push<br />
+          一時テスト：<code className="bg-white/10 px-1 rounded">/admin</code> でアップロード（このPCのみ）
+        </p>
         <Link to="/admin" className="px-4 py-2 rounded bg-white text-black font-bold">
-          管理ページでアップロード
+          管理ページへ
         </Link>
       </div>
     );
   }
+
+  const current = slides[idx];
 
   return (
     <div
@@ -79,10 +110,10 @@ export const SlidesRoute = () => {
       onClick={() => setIdx((i) => Math.min(slides.length - 1, i + 1))}
     >
       <div className="flex-1 flex items-center justify-center p-2">
-        {previews[idx] && (
+        {current && (
           <img
-            src={previews[idx]}
-            alt={slides[idx].name}
+            src={current.url}
+            alt={current.name}
             className="max-w-full max-h-[100vh] object-contain"
           />
         )}
@@ -91,6 +122,11 @@ export const SlidesRoute = () => {
         <span className="px-2 py-1 rounded bg-white/10 text-white tabular-nums">
           {idx + 1} / {slides.length}
         </span>
+        {current?.source === 'local' && (
+          <span className="px-2 py-1 rounded bg-violet-500/40 text-white" title="この端末のみのスライド">
+            local
+          </span>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();

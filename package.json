@@ -5,8 +5,9 @@
   "type": "module",
   "description": "高校eスポーツコース 60分授業進行アプリ",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/generate-slides-manifest.mjs && vite",
     "dev:worker": "wrangler dev",
+    "prebuild": "node scripts/generate-slides-manifest.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit && tsc -p worker/tsconfig.json --noEmit",

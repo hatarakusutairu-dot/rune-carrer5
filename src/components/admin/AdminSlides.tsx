@@ -240,11 +240,18 @@ export const AdminSlides = () => {
         </ul>
       )}
 
-      <p className="text-[11px] text-slate-500 leading-relaxed">
-        ※ スライドは<strong>この端末のブラウザ内</strong>に保存されます。別の端末では表示されません（共有版は今後実装予定）。
-        <br />
-        ※ シークレットモード/閲覧履歴の削除で消えるので、本番前に必ずアップロード状態を確認してください。
-      </p>
+      <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 leading-relaxed space-y-1">
+        <p>
+          <strong>📌 これは「この端末だけ」のスライド</strong>です。当日の差し替えやテスト用。
+        </p>
+        <p>
+          <strong>本番用デッキ</strong>は <code className="bg-white px-1 rounded">public/slides/</code>{' '}
+          に PNG/JPG/GIF を入れて git push してください（自動で manifest.json が更新されて全端末に反映）。
+        </p>
+        <p className="text-amber-700">
+          /slides 再生時の順序：<strong>本番デッキ → ローカルアップ</strong>（ファイル名昇順）
+        </p>
+      </div>
     </div>
   );
 };
