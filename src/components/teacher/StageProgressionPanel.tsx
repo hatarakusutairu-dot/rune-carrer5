@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { GAME_ORDER, type GameId, type Phase } from '@shared/protocol';
 import { DEFAULT_GAME_DURATION } from '@shared/scoring';
 import { Button } from '@/components/common/Button';
@@ -12,6 +13,18 @@ const STAGE_TITLES = [
   'Stage 5：Skill Link / 社会で活きる力',
   'Stage 6：My Quest / この1年で育てたい力',
 ];
+
+// 授業推奨5種（高校生に楽しい × 採用納得感 × 結果分散）
+const RECOMMENDED_GAMES: GameId[] = [
+  'balloon',
+  'digit_span',
+  'emotion_match',
+  'money_split',
+  'wasabi_waiter',
+];
+
+// 残り4種：使う場合は「その他」を展開して選択
+const EXTRA_GAMES: GameId[] = GAME_ORDER.filter((g) => !RECOMMENDED_GAMES.includes(g));
 
 const GAME_LABELS: Record<GameId, string> = {
   balloon: '風船リスク（リスク許容度）',
@@ -44,6 +57,7 @@ const phaseLabel = (phase: Phase): string => {
 
 export const StageProgressionPanel = () => {
   const { state, send } = useSync();
+  const [showExtras, setShowExtras] = useState(false);
   if (!state) return null;
 
   const stage = state.currentStage;
@@ -55,6 +69,41 @@ export const StageProgressionPanel = () => {
     send({ type: 'T_START_GAME', gameId, durationMs });
   };
 
+  const renderGame = (g: GameId) => (
+    <li
+      key={g}
+      className={`rounded-xl border p-3 ${
+        currentGame === g ? 'border-teal-500 bg-teal-50' : 'border-slate-200'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <div className="text-xs text-slate-500">
+            推奨 {Math.round((DEFAULT_GAME_DURATION[g] ?? 0) / 1000)}秒
+          </div>
+          <div className="font-semibold text-sm">{GAME_LABELS[g]}</div>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            variant={currentGame === g ? 'primary' : 'secondary'}
+            onClick={() => startGame(g)}
+            disabled={phase === 'intro' || phase === 'active'}
+            className="px-3 py-1.5 text-sm"
+          >
+            開始
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => send({ type: 'T_SKIP_GAME', gameId: g })}
+            className="px-2 py-1.5 text-xs"
+          >
+            スキップ
+          </Button>
+        </div>
+      </div>
+    </li>
+  );
+
   return (
     <div className="rounded-2xl bg-white border border-slate-200 p-6">
       <div className="flex items-baseline justify-between flex-wrap gap-2">
@@ -64,43 +113,31 @@ export const StageProgressionPanel = () => {
 
       {stage === 1 ? (
         <div className="mt-4">
-          <div className="text-sm font-medium text-slate-700">採用ゲーム7種</div>
+          <div className="text-sm font-medium text-slate-700">
+            授業推奨 5種
+            <span className="ml-2 text-[11px] text-slate-500 font-normal">
+              （楽しさ × 採用納得感 × 結果分散）
+            </span>
+          </div>
           <ol className="mt-2 grid gap-2 sm:grid-cols-2">
-            {GAME_ORDER.map((g) => (
-              <li
-                key={g}
-                className={`rounded-xl border p-3 ${
-                  currentGame === g ? 'border-teal-500 bg-teal-50' : 'border-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="text-xs text-slate-500">
-                      推奨 {Math.round((DEFAULT_GAME_DURATION[g] ?? 0) / 1000)}秒
-                    </div>
-                    <div className="font-semibold text-sm">{GAME_LABELS[g]}</div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant={currentGame === g ? 'primary' : 'secondary'}
-                      onClick={() => startGame(g)}
-                      disabled={phase === 'intro' || phase === 'active'}
-                      className="px-3 py-1.5 text-sm"
-                    >
-                      開始
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => send({ type: 'T_SKIP_GAME', gameId: g })}
-                      className="px-2 py-1.5 text-xs"
-                    >
-                      スキップ
-                    </Button>
-                  </div>
-                </div>
-              </li>
-            ))}
+            {RECOMMENDED_GAMES.map(renderGame)}
           </ol>
+
+          {/* その他のゲーム（隠しメニュー） */}
+          <div className="mt-3">
+            <button
+              onClick={() => setShowExtras((v) => !v)}
+              className="text-xs text-slate-500 hover:text-slate-700 underline"
+            >
+              {showExtras
+                ? '▼ その他 4種を隠す'
+                : `▶ その他 ${EXTRA_GAMES.length}種を表示（カード山・信号・パターン・塔）`}
+            </button>
+            {showExtras && (
+              <ol className="mt-2 grid gap-2 sm:grid-cols-2">{EXTRA_GAMES.map(renderGame)}</ol>
+            )}
+          </div>
+
           <div className="mt-4 flex flex-wrap gap-2">
             <Button
               variant="secondary"
