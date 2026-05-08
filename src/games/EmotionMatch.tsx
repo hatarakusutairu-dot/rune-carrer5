@@ -5,7 +5,7 @@ import { useTimeoutOnce } from './_useTimer';
 import { ImageWithFallback } from '../components/common/ImageWithFallback';
 import { EMOTIONS, type Emotion } from '../content/emotions';
 
-const TOTAL = 12;
+const TOTAL = 10;
 
 interface Q {
   key: string;

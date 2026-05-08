@@ -25,9 +25,7 @@
 |---|---|---|
 | `logo.png` | アプリトップ | 1024×1024 PNG透過 |
 
-### 2. 表情（EmotionMatch ゲーム用）— 18種
-
-ChatGPTプロンプト名そのままでOK：
+### 2. 表情（EmotionMatch ゲーム用）— 10種
 
 | ファイル名 | label | フォールバック |
 |---|---|---|
@@ -38,17 +36,9 @@ ChatGPTプロンプト名そのままでOK：
 | `emotion-fear.png` | 恐れ | 😨 |
 | `emotion-disgust.png` | 嫌悪 | 🤢 |
 | `emotion-trust.png` | 信頼 | 😌 |
-| `emotion-anticipation.png` | 期待 | 🤩 |
-| `emotion-relief.png` | 安堵 | 😮‍💨 |
 | `emotion-lonely.png` | 寂しさ | 🥺 |
-| `emotion-irritated.png` | 苛立ち | 😤 |
-| `emotion-confused.png` | 戸惑い | 😕 |
-| `emotion-anxious.png` | 不安 | 😟 |
-| `emotion-contempt.png` | 軽蔑 | 😏 |
 | `emotion-peaceful.png` | 安らぎ | 😊 |
 | `emotion-excitement.png` | 興奮 | 😆 |
-| `emotion-disappointed.png` | 落胆 | 😔 |
-| `emotion-tense.png` | 緊張 | 😬 |
 
 推奨：512×512 PNG、200KB以内、表示は 128×128（object-cover）
 
