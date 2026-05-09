@@ -5,12 +5,14 @@ import { useTimeoutOnce } from './_useTimer';
 import { ImageWithFallback } from '@/components/common/ImageWithFallback';
 
 // Knack の Wasabi Waiter に近い接客マルチタスク課題
-// - 客が席に到着、注文を表示
-// - 一定時間内にプレイヤーが「料理」をタップして客に運ぶ
-// - 正しい料理 = 正解、間違い = ミス、時間切れ = 取りこぼし
-// - 同時に最大3卓まで進行 → マルチタスク・優先順位
+// eスポーツコース生徒向けに難易度を上げた版:
+//  - 席数 4
+//  - 我慢時間 短い（5〜8秒）、後半さらに短縮
+//  - 客到着間隔 短い（300〜800ms）、後半さらに加速
+//  - 誤答ペナルティ：その席の patience が半減
+//  - 注文を出す瞬間にメニューがランダム入れ替えで認知負荷UP
 
-const SEAT_COUNT = 3;
+const SEAT_COUNT = 4;
 const MENU = [
   { key: 'sushi', label: '寿司', icon: '🍣' },
   { key: 'ramen', label: 'ラーメン', icon: '🍜' },
@@ -22,15 +24,18 @@ const MENU = [
 
 type MenuItem = (typeof MENU)[number];
 
+// 進行度0〜1に応じて [min, max] を線形補間
+const lerp = (a: number, b: number, t: number) => a + (b - a) * Math.max(0, Math.min(1, t));
+
 interface Customer {
   id: number;
-  customerNum: number; // 1〜8（画像 customer-1.png 等に対応）
-  happyFace: string;   // 我慢たっぷりの時の絵文字（画像が無い時のフォールバック）
-  neutralFace: string; // ふつう
-  impatientFace: string; // イライラ
+  customerNum: number;
+  happyFace: string;
+  neutralFace: string;
+  impatientFace: string;
   order: MenuItem;
   arrivedAt: number;
-  patience: number;  // ms
+  patience: number;
 }
 
 const FACES_HAPPY = ['😀', '😊', '😄', '🙂', '😃'];
@@ -41,7 +46,21 @@ const pickRandom = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * 
 
 let nextCustomerId = 1;
 
-const newCustomer = (now: number): Customer => ({
+// 進行度に応じた我慢時間（後半ほど短い）
+const newPatience = (progress: number): number => {
+  const min = lerp(5500, 3500, progress);
+  const max = lerp(8500, 5500, progress);
+  return min + Math.random() * (max - min);
+};
+
+// 進行度に応じた客到着間隔
+const nextArrivalDelay = (progress: number): number => {
+  const min = lerp(350, 200, progress);
+  const max = lerp(900, 500, progress);
+  return min + Math.random() * (max - min);
+};
+
+const newCustomer = (now: number, progress: number): Customer => ({
   id: nextCustomerId++,
   customerNum: 1 + Math.floor(Math.random() * 8),
   happyFace: pickRandom(FACES_HAPPY),
@@ -49,7 +68,7 @@ const newCustomer = (now: number): Customer => ({
   impatientFace: pickRandom(FACES_IMPATIENT),
   order: pickRandom(MENU),
   arrivedAt: now,
-  patience: 9000 + Math.random() * 4000, // 9〜13秒
+  patience: newPatience(progress),
 });
 
 const faceFor = (customer: Customer, now: number): string => {
@@ -77,20 +96,21 @@ export const WasabiWaiter = ({ startedAtMs, durationMs, onComplete }: GameProps)
     return () => clearInterval(t);
   }, []);
 
-  // 新規客の自動発生
+  // 新規客の自動発生（進行度に応じて間隔が短くなる）
   useEffect(() => {
     const empty = seats.findIndex((s) => s === null);
     if (empty < 0) return;
+    const progress = Math.min(1, (Date.now() - startedAtMs) / durationMs);
     const t = window.setTimeout(() => {
       setSeats((prev) => {
         const arr = [...prev];
         const i = arr.findIndex((s) => s === null);
-        if (i >= 0) arr[i] = newCustomer(Date.now());
+        if (i >= 0) arr[i] = newCustomer(Date.now(), progress);
         return arr;
       });
-    }, 600 + Math.random() * 800);
+    }, nextArrivalDelay(progress));
     return () => clearTimeout(t);
-  }, [seats]);
+  }, [seats, startedAtMs, durationMs]);
 
   // 我慢切れチェック
   useEffect(() => {
@@ -133,13 +153,28 @@ export const WasabiWaiter = ({ startedAtMs, durationMs, onComplete }: GameProps)
     if (isCorrect) {
       setCorrect((s) => s + 1);
       setWaitTimes((arr) => [...arr, Date.now() - c.arrivedAt]);
+      // 正解：客退店
+      setFeedback({ seat: selectedSeat, type: 'good' });
+      setSeats((prev) => {
+        const arr = [...prev];
+        arr[selectedSeat] = null;
+        return arr;
+      });
+    } else {
+      // 誤答ペナルティ：客は残るが我慢時間半減（強制的にイラつく）
+      setFeedback({ seat: selectedSeat, type: 'bad' });
+      setSeats((prev) => {
+        const arr = [...prev];
+        const cur = arr[selectedSeat];
+        if (cur) {
+          const elapsed = Date.now() - cur.arrivedAt;
+          const remain = Math.max(0, cur.patience - elapsed);
+          // 残時間を半分にして、すぐ怒り顔エリアへ
+          arr[selectedSeat] = { ...cur, patience: elapsed + remain / 2 };
+        }
+        return arr;
+      });
     }
-    setFeedback({ seat: selectedSeat, type: isCorrect ? 'good' : 'bad' });
-    setSeats((prev) => {
-      const arr = [...prev];
-      arr[selectedSeat] = null;
-      return arr;
-    });
     setSelectedSeat(null);
     window.setTimeout(() => setFeedback(null), 350);
   };

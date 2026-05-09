@@ -165,5 +165,5 @@ export const DEFAULT_GAME_DURATION: Record<GameId, number> = {
   stop_signal: 90_000,
   pattern_match: 80_000,
   towers: 120_000,
-  wasabi_waiter: 90_000,
+  wasabi_waiter: 120_000,
 };
