@@ -20,6 +20,7 @@ import { Stage5SkillLink } from '@/components/stages/Stage5SkillLink';
 import { Stage6QuestCard } from '@/components/stages/Stage6QuestCard';
 import { QuestAggregation } from '@/components/teacher/QuestAggregation';
 import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
+import { sendSlideMessage } from '@/lib/slideControl';
 
 export const TeacherRoute = () => {
   const { state, conn, myRole, teacherToken, resumeAsTeacher, reset } = useSync();
@@ -33,6 +34,17 @@ export const TeacherRoute = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 講師の Stage / Game 変更を /slides と /admin にブロードキャスト
+  useEffect(() => {
+    if (!state) return;
+    sendSlideMessage({
+      type: 'teacher-state',
+      stage: state.currentStage,
+      gameId: state.currentGameId ?? null,
+      phase: state.phase,
+    });
+  }, [state?.currentStage, state?.currentGameId, state?.phase]);
 
   const inRoom = !!(state && teacherToken && myRole === 'teacher');
   const phase = state?.phase ?? 'lobby';

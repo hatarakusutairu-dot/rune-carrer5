@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listSlides } from '@/lib/slidesDB';
 import { onSlideMessage, sendSlideMessage } from '@/lib/slideControl';
+import { isSyncEnabled, resolveTrigger } from '@/lib/slideAutoSync';
 
 // 表示用に統一された Slide 型（デフォルトデッキ・ローカル両方）
 type DisplaySlide = {
@@ -75,7 +76,7 @@ export const SlidesRoute = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [slides.length]);
 
-  // 管理画面からの遠隔操作を受信
+  // 管理画面・講師画面からの遠隔操作を受信
   useEffect(() => {
     const off = onSlideMessage((msg) => {
       if (slides.length === 0) return;
@@ -106,6 +107,21 @@ export const SlidesRoute = () => {
             });
           }
           break;
+        case 'teacher-state': {
+          // /teacher の Stage / Game 変化に追従（自動同期がONの時のみ）
+          if (!isSyncEnabled()) break;
+          const filenames = slides.map((s) => s.name);
+          // ゲームが指定されているならそれを優先、なければStage
+          let target: number | null = null;
+          if (msg.gameId) {
+            target = resolveTrigger({ kind: 'game', gameId: msg.gameId }, filenames);
+          }
+          if (target === null) {
+            target = resolveTrigger({ kind: 'stage', stage: msg.stage }, filenames);
+          }
+          if (target !== null) setIdx(target);
+          break;
+        }
       }
     });
     return off;

@@ -2,6 +2,8 @@
 // BroadcastChannel: 同じオリジン内の別タブ・別ウィンドウ間でメッセージ共有
 // サーバー不要、認証不要、即時
 
+import type { GameId } from '@shared/protocol';
+
 const CHANNEL_NAME = 'rune-slide-control';
 
 export type SlideControlMessage =
@@ -11,7 +13,9 @@ export type SlideControlMessage =
   | { type: 'first' }
   | { type: 'last' }
   | { type: 'state-request' }
-  | { type: 'state-update'; index: number; total: number; name: string };
+  | { type: 'state-update'; index: number; total: number; name: string }
+  // /teacher が Stage / Game を変えた時に発火（自動同期トリガー）
+  | { type: 'teacher-state'; stage: number; gameId: GameId | null; phase: string };
 
 let _channel: BroadcastChannel | null = null;
 
