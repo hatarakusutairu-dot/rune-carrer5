@@ -1,14 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useSync } from '@/contexts/SyncContext';
+import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
 
 // /slides は投影専用：サーバー（state.slideIndex）に従って自動表示
 // 講師の「▶ 次へ」ボタンが押されるとリアルタイム反映される
 export const SlidesRoute = () => {
-  const { state } = useSync();
+  const { state, resumeAsTeacher } = useSync();
   const [slideNames, setSlideNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // /teacher タブと同じ localStorage トークンを使って自動再接続（同ブラウザ）
+  useEffect(() => {
+    if (state) return;
+    const sess = restoreTeacherSession();
+    if (sess) {
+      resumeAsTeacher(sess.code, sess.token);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetch('/slides/manifest.json', { cache: 'no-cache' })
