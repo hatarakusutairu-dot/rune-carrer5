@@ -13,11 +13,13 @@ import type {
 import { REACTION_EMOJIS } from '@shared/protocol';
 import {
   aggregateScores,
+  DEFAULT_GAME_DURATION,
   emptyScores,
   scoreAnswer,
   topType,
   SEED_ORDER,
 } from '@shared/scoring';
+import { slideContextOf } from '@shared/slideContext';
 
 interface Env {
   ROOM: DurableObjectNamespace;
@@ -58,6 +60,10 @@ interface InternalState {
   skillOpinions: Map<string, string>;
   // ステージ内サブステップ
   stageStep: number;
+  // スライド進行（全クライアント共有）
+  slideIndex: number;
+  // スライドファイル名（manifest.json から取り込み、Stage/Game連動判定に使う）
+  slideNames: string[];
 }
 
 interface SerializedState {
@@ -77,6 +83,8 @@ interface SerializedState {
   questCards: Array<[string, { growSkill: string; gameAction: string; schoolAction: string }]>;
   skillOpinions: Array<[string, string]>;
   stageStep: number;
+  slideIndex: number;
+  slideNames: string[];
 }
 
 const serializeState = (s: InternalState): SerializedState => ({
@@ -96,6 +104,8 @@ const serializeState = (s: InternalState): SerializedState => ({
   questCards: Array.from(s.questCards.entries()),
   skillOpinions: Array.from(s.skillOpinions.entries()),
   stageStep: s.stageStep,
+  slideIndex: s.slideIndex,
+  slideNames: s.slideNames,
 });
 
 const deserializeState = (o: SerializedState): InternalState => ({
@@ -115,6 +125,8 @@ const deserializeState = (o: SerializedState): InternalState => ({
   questCards: new Map(o.questCards ?? []),
   skillOpinions: new Map(o.skillOpinions ?? []),
   stageStep: o.stageStep ?? 0,
+  slideIndex: o.slideIndex ?? 0,
+  slideNames: o.slideNames ?? [],
 });
 
 const generateToken = (): string => {
@@ -177,6 +189,8 @@ export class RoomDO extends DurableObject<Env> {
       questCards: new Map(),
       skillOpinions: new Map(),
       stageStep: 0,
+      slideIndex: 0,
+      slideNames: [],
     };
   }
 
@@ -199,6 +213,7 @@ export class RoomDO extends DurableObject<Env> {
       perClassCount,
       serverTime: Date.now(),
       stageStep: this.state.stageStep,
+      slideIndex: this.state.slideIndex,
     };
   }
 
@@ -314,6 +329,18 @@ export class RoomDO extends DurableObject<Env> {
 
       case 'T_PREV_STEP':
         return this.tPrevStep(ws);
+
+      case 'T_NEXT_SLIDE':
+        return this.tGotoSlide(ws, this.state.slideIndex + 1);
+
+      case 'T_PREV_SLIDE':
+        return this.tGotoSlide(ws, this.state.slideIndex - 1);
+
+      case 'T_GOTO_SLIDE':
+        return this.tGotoSlide(ws, msg.index);
+
+      case 'T_SET_SLIDE_DECK':
+        return this.tSetSlideDeck(ws, msg.names);
 
       case 'T_CLOSE_ROOM':
         return this.tCloseRoom(ws);
@@ -460,6 +487,54 @@ export class RoomDO extends DurableObject<Env> {
   private tPrevStep(ws: WebSocket): void {
     if (!this.requireTeacher(ws)) return;
     this.state.stageStep = Math.max(0, this.state.stageStep - 1);
+    this.broadcastPhase();
+  }
+
+  // 講師起動時にスライドファイル一覧をサーバー側に登録（manifest.json から）
+  private tSetSlideDeck(ws: WebSocket, names: string[]): void {
+    if (!this.requireTeacher(ws)) return;
+    this.state.slideNames = Array.isArray(names) ? names.slice() : [];
+    if (this.state.slideIndex >= this.state.slideNames.length) {
+      this.state.slideIndex = Math.max(0, this.state.slideNames.length - 1);
+    }
+    this.broadcastPhase();
+  }
+
+  // スライド遷移（▶ 次へボタンの中核）
+  // ファイル名から slide context を取り、Stage / Game も自動で同期する
+  private tGotoSlide(ws: WebSocket, rawIndex: number): void {
+    if (!this.requireTeacher(ws)) return;
+    const total = this.state.slideNames.length;
+    if (total === 0) {
+      // スライド未登録でも index は動かす（クライアント側で manifest 取り直し）
+      this.state.slideIndex = Math.max(0, rawIndex);
+      this.broadcastPhase();
+      return;
+    }
+    const idx = Math.max(0, Math.min(total - 1, rawIndex));
+    if (idx === this.state.slideIndex) return;
+    this.state.slideIndex = idx;
+
+    // ファイル名から context を取得して Stage / Game を更新
+    const name = this.state.slideNames[idx] ?? '';
+    const ctx = slideContextOf(name);
+    if (ctx.stage !== undefined && ctx.stage !== this.state.currentStage) {
+      this.state.currentStage = ctx.stage;
+      this.state.stageStep = 0;
+      // ゲームが進行中だったら止める
+      this.state.currentGameId = null;
+      this.state.phase = 'lobby';
+      this.state.introCountdownAt = null;
+      this.state.activeStartedAt = null;
+    }
+    if (ctx.gameId && ctx.startGame) {
+      // ゲーム開始（既存 tStartGame と同じ振る舞いだが直接実行）
+      this.state.currentGameId = ctx.gameId;
+      this.state.phase = 'intro';
+      this.state.introCountdownAt = Date.now() + 500;
+      this.state.activeStartedAt = null;
+      this.state.activeDurationMs = DEFAULT_GAME_DURATION[ctx.gameId] ?? 90_000;
+    }
     this.broadcastPhase();
   }
 

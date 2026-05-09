@@ -65,6 +65,8 @@ export interface PublicRoomState {
   serverTime: number;                  // 同期用
   // ステージ内サブステップ（Stage 5 等で使用、Stage切替で0にリセット）
   stageStep: number;
+  // スライド進行（全クライアント共有、講師が「次へ」で進める）
+  slideIndex: number;
 }
 
 export interface PerClassAggregation {
@@ -100,6 +102,10 @@ export type ClientMsg =
   | { type: 'T_NEXT_STAGE' }
   | { type: 'T_NEXT_STEP' }
   | { type: 'T_PREV_STEP' }
+  | { type: 'T_NEXT_SLIDE' }
+  | { type: 'T_PREV_SLIDE' }
+  | { type: 'T_GOTO_SLIDE'; index: number }
+  | { type: 'T_SET_SLIDE_DECK'; names: string[] }
   | { type: 'T_CLOSE_ROOM' }
   // 生徒
   | { type: 'S_PEEK'; code: string }

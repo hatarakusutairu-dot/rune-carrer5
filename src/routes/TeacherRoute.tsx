@@ -20,10 +20,10 @@ import { Stage5SkillLink } from '@/components/stages/Stage5SkillLink';
 import { Stage6QuestCard } from '@/components/stages/Stage6QuestCard';
 import { QuestAggregation } from '@/components/teacher/QuestAggregation';
 import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
-import { sendSlideMessage } from '@/lib/slideControl';
+import { TeacherSlideControl } from '@/components/teacher/TeacherSlideControl';
 
 export const TeacherRoute = () => {
-  const { state, conn, myRole, teacherToken, resumeAsTeacher, reset } = useSync();
+  const { state, conn, myRole, teacherToken, resumeAsTeacher, reset, send } = useSync();
 
   // ページ復帰時の自動再接続
   useEffect(() => {
@@ -35,16 +35,21 @@ export const TeacherRoute = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 講師の Stage / Game 変更を /slides と /admin にブロードキャスト
+  // 講師接続後、スライド manifest を取得してサーバーに送信
   useEffect(() => {
-    if (!state) return;
-    sendSlideMessage({
-      type: 'teacher-state',
-      stage: state.currentStage,
-      gameId: state.currentGameId ?? null,
-      phase: state.phase,
-    });
-  }, [state?.currentStage, state?.currentGameId, state?.phase]);
+    if (!state || myRole !== 'teacher') return;
+    fetch('/slides/manifest.json', { cache: 'no-cache' })
+      .then((res) => (res.ok ? res.json() : { slides: [] }))
+      .then((data: { slides?: string[] }) => {
+        const names = Array.isArray(data?.slides) ? data.slides : [];
+        send({ type: 'T_SET_SLIDE_DECK', names });
+      })
+      .catch(() => {
+        // manifest取得失敗時は空デッキ
+        send({ type: 'T_SET_SLIDE_DECK', names: [] });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myRole, state?.code]);
 
   const inRoom = !!(state && teacherToken && myRole === 'teacher');
   const phase = state?.phase ?? 'lobby';
@@ -62,6 +67,9 @@ export const TeacherRoute = () => {
         <div className="grid gap-4 lg:grid-cols-3 max-w-7xl">
           <div className="lg:col-span-2 space-y-4">
             <RoomCodeDisplay code={state.code} />
+
+            {/* スライド進行（最重要：▶ 次へ で全部進む） */}
+            <TeacherSlideControl />
 
             {/* Stage 0：ミッション表示（lobbyフェーズ） */}
             {phase === 'lobby' && stage === 0 && <Stage0Mission variant="teacher" />}

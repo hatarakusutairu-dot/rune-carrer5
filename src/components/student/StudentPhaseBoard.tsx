@@ -6,6 +6,7 @@ import { MyAnalysisCard } from '@/components/student/MyAnalysisCard';
 import { GameContainer } from '@/games/GameContainer';
 import { CountdownBig } from '@/components/common/CountdownBig';
 import { WaitingScene } from '@/components/student/WaitingScene';
+import { StudentSlideView } from '@/components/student/StudentSlideView';
 import { Stage0Mission } from '@/components/stages/Stage0Mission';
 import { Stage2PersonalResult } from '@/components/stages/Stage2PersonalResult';
 import { Stage3Share } from '@/components/stages/Stage3Share';
@@ -46,6 +47,9 @@ export const StudentPhaseBoard = () => {
         <span>クラス：{myClass}</span>
         <span>{state.totalStudents}人入室中</span>
       </div>
+
+      {/* スライドプレビュー（講師進行に追従、ゲーム中は非表示） */}
+      <StudentSlideView />
 
       {/* Stage 0：ミッション */}
       {phase === 'lobby' && currentStage === 0 && (
