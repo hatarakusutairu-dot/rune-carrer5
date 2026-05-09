@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { ImageWithFallback } from '../common/ImageWithFallback';
 import { AI_AVATARS } from '@/content/aiAvatars';
+import { useSync } from '@/contexts/SyncContext';
 
 interface Props {
   variant: 'teacher' | 'student';
@@ -8,10 +8,21 @@ interface Props {
 
 type SubStage = 'reveal' | 'jp_examples' | 'ai_overview' | 'ai_trend' | 'ai_avatar';
 
+const SUB_TABS: ReadonlyArray<readonly [SubStage, string]> = [
+  ['reveal', '① 種明かし'],
+  ['jp_examples', '② 日本での例'],
+  ['ai_overview', '③ AI採用の全体像'],
+  ['ai_trend', '④ AI面接の今'],
+  ['ai_avatar', '⑤ AIアバター面接'],
+] as const;
+
 const REVEAL_HEADLINE = '実は…';
 
 export const Stage4Reveal = ({ variant }: Props) => {
-  const [sub, setSub] = useState<SubStage>('reveal');
+  const { state, send } = useSync();
+  const stageStep = state?.stageStep ?? 0;
+  const sub = SUB_TABS[Math.max(0, Math.min(SUB_TABS.length - 1, stageStep))][0];
+  const isTeacher = variant === 'teacher';
 
   return (
     <div className="rounded-2xl bg-gradient-to-br from-indigo-50 via-violet-50 to-rose-50 border border-violet-200 p-6 sm:p-8 space-y-5">
@@ -19,32 +30,30 @@ export const Stage4Reveal = ({ variant }: Props) => {
         Stage 4
       </div>
 
-      {/* 上部：サブセクションタブ */}
-      <div className="flex flex-wrap gap-1">
-        {([
-          ['reveal', '① 種明かし'],
-          ['jp_examples', '② 日本での例'],
-          ['ai_overview', '③ AI採用の全体像'],
-          ['ai_trend', '④ AI面接の今'],
-          ['ai_avatar', '⑤ AIアバター面接'],
-        ] as const).map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setSub(id)}
-            className={`px-3 py-1.5 text-xs rounded-full font-semibold transition ${
-              sub === id
-                ? 'bg-violet-600 text-white'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {sub === 'reveal' && (
-        <RevealSection variant={variant} />
+      {/* 上部：サブセクションタブ — 講師のみ操作可、生徒は表示のみ */}
+      {isTeacher ? (
+        <div className="flex flex-wrap gap-1">
+          {SUB_TABS.map(([id, label], i) => (
+            <button
+              key={id}
+              onClick={() => send({ type: 'T_GOTO_STEP', step: i })}
+              className={`px-3 py-1.5 text-xs rounded-full font-semibold transition ${
+                sub === id
+                  ? 'bg-violet-600 text-white'
+                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="text-xs font-semibold text-violet-800 px-3 py-1.5 rounded-full bg-violet-100 inline-block">
+          {SUB_TABS.find(([id]) => id === sub)?.[1]}
+        </div>
       )}
+
+      {sub === 'reveal' && <RevealSection variant={variant} />}
       {sub === 'jp_examples' && <JpExamplesSection />}
       {sub === 'ai_overview' && <AiOverviewSection />}
       {sub === 'ai_trend' && <AiTrendSection />}

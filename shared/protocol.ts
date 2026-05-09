@@ -106,6 +106,7 @@ export type ClientMsg =
   | { type: 'T_NEXT_STAGE' }
   | { type: 'T_NEXT_STEP' }
   | { type: 'T_PREV_STEP' }
+  | { type: 'T_GOTO_STEP'; step: number }
   | { type: 'T_NEXT_SLIDE' }
   | { type: 'T_PREV_SLIDE' }
   | { type: 'T_GOTO_SLIDE'; index: number }

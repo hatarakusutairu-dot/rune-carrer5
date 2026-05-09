@@ -61,8 +61,11 @@ export const StudentPhaseBoard = () => {
     phase === 'lobby' && currentStage !== 1;
   const isStage2Summary =
     phase === 'stage_summary' && currentStage === 1; // Stage 1 締め後は currentStage=1 で stage_summary
+  // スライド13(stage2-intro)では総合分析を出さない、14(types-overview)以降から表示
+  const { slideName } = usePostSlidePhase();
+  const isStage2IntroSlide = slideName.includes('stage2-intro');
   const isStage2Lobby =
-    phase === 'lobby' && currentStage === 2;
+    phase === 'lobby' && currentStage === 2 && !isStage2IntroSlide;
 
   return (
     <div className="max-w-md">

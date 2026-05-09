@@ -344,6 +344,9 @@ export class RoomDO extends DurableObject<Env> {
       case 'T_PREV_STEP':
         return this.tPrevStep(ws);
 
+      case 'T_GOTO_STEP':
+        return this.tGotoStep(ws, msg.step);
+
       case 'T_NEXT_SLIDE':
         return this.tNextSlide(ws);
 
@@ -498,6 +501,12 @@ export class RoomDO extends DurableObject<Env> {
   private tNextStep(ws: WebSocket): void {
     if (!this.requireTeacher(ws)) return;
     this.state.stageStep += 1;
+    this.broadcastPhase();
+  }
+
+  private tGotoStep(ws: WebSocket, step: number): void {
+    if (!this.requireTeacher(ws)) return;
+    this.state.stageStep = Math.max(0, Math.floor(step));
     this.broadcastPhase();
   }
 
