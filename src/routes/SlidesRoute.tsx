@@ -2,15 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
 
-// /slides は投影専用：サーバー（state.slideIndex）に従って自動表示
-// 講師の「▶ 次へ」ボタンが押されるとリアルタイム反映される
+// /slides は予備の投影タブ。通常は /teacher の「⛶ 全画面」で投影してOK。
+// このページは別端末で投影したい時のために残してある。
 export const SlidesRoute = () => {
   const { state, resumeAsTeacher } = useSync();
   const [slideNames, setSlideNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // /teacher タブと同じ localStorage トークンを使って自動再接続（同ブラウザ）
   useEffect(() => {
     if (state) return;
     const sess = restoreTeacherSession();

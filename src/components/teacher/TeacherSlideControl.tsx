@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSync } from '@/contexts/SyncContext';
 import { slideContextOf } from '@shared/slideContext';
 import { DEFAULT_GAME_DURATION } from '@shared/scoring';
@@ -31,6 +31,39 @@ export const TeacherSlideControl = () => {
   const { state, send } = useSync();
   const [slideNames, setSlideNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // 全画面化（投影モード）。ブラウザのFullscreen APIを使用
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      previewRef.current?.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  // 全画面中は矢印キー/スペースで進めるようにする
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        send({ type: 'T_NEXT_SLIDE' });
+        e.preventDefault();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        send({ type: 'T_PREV_SLIDE' });
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isFullscreen, send]);
 
   useEffect(() => {
     fetch('/slides/manifest.json', { cache: 'no-cache' })
@@ -110,16 +143,52 @@ export const TeacherSlideControl = () => {
         </span>
       </div>
 
-      {/* プレビュー（スライド表示中のみ） */}
+      {/* プレビュー（スライド表示中のみ。全画面化対応） */}
       {currentName && !inPhase && (
-        <div className="rounded-xl bg-black overflow-hidden shadow-inner mb-3">
-          <div className="aspect-video flex items-center justify-center">
+        <div
+          ref={previewRef}
+          className={`relative rounded-xl bg-black overflow-hidden shadow-inner mb-3 ${
+            isFullscreen ? 'flex items-center justify-center min-h-screen' : ''
+          }`}
+        >
+          <div className={`flex items-center justify-center ${isFullscreen ? 'w-full h-full' : 'aspect-video'}`}>
             <img
               src={`/slides/${currentName}`}
               alt={currentName}
               className="max-w-full max-h-full object-contain"
             />
           </div>
+          <button
+            onClick={toggleFullscreen}
+            className="absolute top-2 right-2 px-3 py-1.5 rounded-lg bg-white/15 backdrop-blur text-white text-sm hover:bg-white/30 border border-white/20"
+            title={isFullscreen ? '元に戻す（ESC）' : '投影用 全画面表示'}
+          >
+            {isFullscreen ? '✕ 戻る' : '⛶ 全画面'}
+          </button>
+          {/* 全画面中は ▶◀ コントロールも重ねる */}
+          {isFullscreen && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3">
+              <button
+                onClick={goPrev}
+                disabled={isFirst}
+                className="px-5 py-3 rounded-xl bg-white/15 backdrop-blur text-white font-bold disabled:opacity-30 hover:bg-white/30 border border-white/20"
+              >
+                ◀
+              </button>
+              <button
+                onClick={goNext}
+                disabled={isLast && !nextPhase}
+                className="px-8 py-3 rounded-xl bg-rose-600/90 backdrop-blur text-white font-black text-lg disabled:opacity-50 hover:bg-rose-700"
+              >
+                {nextLabel}
+              </button>
+            </div>
+          )}
+          {isFullscreen && (
+            <div className="absolute top-2 left-2 px-2 py-1 rounded bg-white/15 backdrop-blur text-white text-xs tabular-nums">
+              {idx + 1} / {total}
+            </div>
+          )}
         </div>
       )}
 
