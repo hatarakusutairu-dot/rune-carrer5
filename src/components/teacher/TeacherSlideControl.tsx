@@ -1,14 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useSync } from '@/contexts/SyncContext';
+import { slideContextOf } from '@shared/slideContext';
+import { DEFAULT_GAME_DURATION } from '@shared/scoring';
+
+const GAME_LABELS: Record<string, string> = {
+  balloon: '🎈 風船リスク',
+  digit_span: '🔢 数字記憶',
+  card_decks: '🎴 カード山引き',
+  emotion_match: '😊 表情を読む',
+  money_split: '🪙 コイン分配',
+  stop_signal: '🚦 信号反応',
+  pattern_match: '◆ パターン推論',
+  towers: '🗼 塔の移動',
+  wasabi_waiter: '🍜 食堂タイム',
+};
 
 // 講師ホーム画面の最上部に置く「▶ 次へ」コントロール
-// このボタン1つでスライド・Stage・ゲームが連動して進む
+// スライド送り＋ゲーム開始ボタンの2系統
 export const TeacherSlideControl = () => {
   const { state, send } = useSync();
   const [slideNames, setSlideNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // manifest.json から取得（プレビュー表示用）
   useEffect(() => {
     fetch('/slides/manifest.json', { cache: 'no-cache' })
       .then((res) => (res.ok ? res.json() : { slides: [] }))
@@ -29,6 +42,24 @@ export const TeacherSlideControl = () => {
 
   const goNext = () => send({ type: 'T_NEXT_SLIDE' });
   const goPrev = () => send({ type: 'T_PREV_SLIDE' });
+
+  // 現在のスライドがゲーム対応ならその gameId を取得
+  const ctx = currentName ? slideContextOf(currentName) : {};
+  const slideGameId = ctx.gameId;
+  const phase = state.phase;
+  // ゲーム開始ボタンを出す条件：ゲームスライド & ゲーム未開始 (lobby)
+  const showStartButton = !!slideGameId && phase === 'lobby';
+  // ゲーム実行中の表示
+  const isGameActive = phase === 'intro' || phase === 'active';
+
+  const startGame = () => {
+    if (!slideGameId) return;
+    const durationMs = DEFAULT_GAME_DURATION[slideGameId] ?? 90_000;
+    send({ type: 'T_START_GAME', gameId: slideGameId, durationMs });
+  };
+  const endGame = () => {
+    send({ type: 'T_END_GAME' });
+  };
 
   if (total === 0 && !loading) {
     return (
@@ -66,7 +97,27 @@ export const TeacherSlideControl = () => {
         </div>
       )}
 
-      {/* メインの「▶ 次へ」ボタン（最重要） */}
+      {/* ゲーム開始ボタン（ゲームスライド＆未開始時のみ表示） */}
+      {showStartButton && slideGameId && (
+        <button
+          onClick={startGame}
+          className="w-full py-4 mb-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xl shadow"
+        >
+          {GAME_LABELS[slideGameId] ?? slideGameId} を開始
+        </button>
+      )}
+
+      {/* ゲーム実行中の早期終了ボタン */}
+      {isGameActive && (
+        <button
+          onClick={endGame}
+          className="w-full py-3 mb-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold"
+        >
+          ⏹ 強制終了して結果へ
+        </button>
+      )}
+
+      {/* メインの「▶ 次へ」ボタン（スライド送り） */}
       <div className="grid grid-cols-4 gap-2">
         <button
           onClick={goPrev}
@@ -85,7 +136,7 @@ export const TeacherSlideControl = () => {
       </div>
 
       <div className="mt-2 text-[11px] text-slate-600 leading-relaxed">
-        このボタン1つでスライドが進み、Stage/ゲームも自動で同期します。
+        スライド送りは「▶ 次へ」、ゲームは「{GAME_LABELS[slideGameId ?? ''] ?? 'ゲーム'} を開始」ボタンから。
         {currentName && (
           <span className="block mt-0.5 text-slate-500 truncate">
             現在：<code className="bg-white/60 px-1 rounded">{currentName}</code>

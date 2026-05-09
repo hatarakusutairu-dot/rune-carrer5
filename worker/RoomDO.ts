@@ -13,7 +13,6 @@ import type {
 import { REACTION_EMOJIS } from '@shared/protocol';
 import {
   aggregateScores,
-  DEFAULT_GAME_DURATION,
   emptyScores,
   scoreAnswer,
   topType,
@@ -501,12 +500,13 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   // スライド遷移（▶ 次へボタンの中核）
-  // ファイル名から slide context を取り、Stage / Game も自動で同期する
+  // ファイル名から slide context を取り、Stage / Game ID をヒントとして同期する
+  // ゲームは自動開始しない（講師が「開始ボタン」で明示的に始める）
   private tGotoSlide(ws: WebSocket, rawIndex: number): void {
     if (!this.requireTeacher(ws)) return;
     const total = this.state.slideNames.length;
     if (total === 0) {
-      // スライド未登録でも index は動かす（クライアント側で manifest 取り直し）
+      // スライド未登録でも index は動かす
       this.state.slideIndex = Math.max(0, rawIndex);
       this.broadcastPhase();
       return;
@@ -515,25 +515,24 @@ export class RoomDO extends DurableObject<Env> {
     if (idx === this.state.slideIndex) return;
     this.state.slideIndex = idx;
 
-    // ファイル名から context を取得して Stage / Game を更新
+    // スライド変更時はフェーズを lobby に戻す（ゲーム中なら強制停止）
+    this.state.phase = 'lobby';
+    this.state.introCountdownAt = null;
+    this.state.activeStartedAt = null;
+    this.state.activeDurationMs = null;
+
+    // ファイル名から context を取得して Stage / GameId を更新（自動開始はしない）
     const name = this.state.slideNames[idx] ?? '';
     const ctx = slideContextOf(name);
     if (ctx.stage !== undefined && ctx.stage !== this.state.currentStage) {
       this.state.currentStage = ctx.stage;
       this.state.stageStep = 0;
-      // ゲームが進行中だったら止める
-      this.state.currentGameId = null;
-      this.state.phase = 'lobby';
-      this.state.introCountdownAt = null;
-      this.state.activeStartedAt = null;
     }
-    if (ctx.gameId && ctx.startGame) {
-      // ゲーム開始（既存 tStartGame と同じ振る舞いだが直接実行）
+    // ゲームスライドの場合: currentGameId をヒントとしてセット（active にはしない）
+    if (ctx.gameId) {
       this.state.currentGameId = ctx.gameId;
-      this.state.phase = 'intro';
-      this.state.introCountdownAt = Date.now() + 500;
-      this.state.activeStartedAt = null;
-      this.state.activeDurationMs = DEFAULT_GAME_DURATION[ctx.gameId] ?? 90_000;
+    } else {
+      this.state.currentGameId = null;
     }
     this.broadcastPhase();
   }
