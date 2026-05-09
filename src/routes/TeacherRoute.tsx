@@ -13,6 +13,8 @@ import { AggregationDisplay } from '@/components/teacher/AggregationDisplay';
 import { ClassAnalysisCard } from '@/components/teacher/ClassAnalysisCard';
 import { GameResultBurst } from '@/components/teacher/GameResultBurst';
 import { CountdownBig } from '@/components/common/CountdownBig';
+import { GameIntroCard } from '@/components/common/GameIntroCard';
+import type { GameId } from '@shared/protocol';
 import { Stage3Share } from '@/components/stages/Stage3Share';
 import { Stage4Reveal } from '@/components/stages/Stage4Reveal';
 import { Stage5SkillLink } from '@/components/stages/Stage5SkillLink';
@@ -115,6 +117,11 @@ export const TeacherRoute = () => {
             {/* スライド後フェーズ（全体分析・意見収集・クエスト・QR） */}
             {postSlidePhase && <PhaseTeacherView phase={postSlidePhase} />}
 
+            {/* ゲームスライド表示中はゲーム説明（生徒画面と同じ） */}
+            {phase === 'lobby' && stage === 1 && state.currentGameId && (
+              <GameIntroCard gameId={state.currentGameId as GameId} variant="teacher" />
+            )}
+
             {/* Stage 3〜6（lobbyフェーズ） */}
             {phase === 'lobby' && stage === 3 && <Stage3Share variant="teacher" />}
             {phase === 'lobby' && stage === 4 && <Stage4Reveal variant="teacher" />}
@@ -160,7 +167,11 @@ export const TeacherRoute = () => {
               </>
             )}
 
-            <StageProgressionPanel />
+            {/* StageProgressionPanel は ▶次へ で進行する新仕様では基本不要。
+                ゲームスライド中は隠す（混乱防止）。それ以外では補助として残す */}
+            {!(phase === 'lobby' && stage === 1 && state.currentGameId) && (
+              <StageProgressionPanel />
+            )}
           </div>
 
           <aside className="space-y-4">

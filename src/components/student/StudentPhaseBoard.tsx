@@ -15,7 +15,7 @@ import { Stage4Reveal } from '@/components/stages/Stage4Reveal';
 import { Stage5SkillLink } from '@/components/stages/Stage5SkillLink';
 import { Stage6QuestCard } from '@/components/stages/Stage6QuestCard';
 import { getMyAnswer } from '@/lib/myAnswers';
-import { GAME_INFO } from '@/content/gameInfo';
+import { GameIntroCard } from '@/components/common/GameIntroCard';
 
 export const StudentPhaseBoard = () => {
   const { state, myClass } = useSync();
@@ -160,32 +160,3 @@ const PhaseSection = () => {
   );
 };
 
-// ゲーム紹介カード（スライド表示中・ゲーム未開始時に出す）
-const GameIntroCard = ({ gameId }: { gameId: GameId }) => {
-  const info = GAME_INFO[gameId];
-  if (!info) return null;
-  return (
-    <div className="rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 border-2 border-emerald-300 p-5">
-      <div className="text-center">
-        <div className="text-5xl mb-2">{info.emoji}</div>
-        <div className="text-base font-black text-emerald-900">{info.name}</div>
-      </div>
-      <p className="mt-3 text-sm text-slate-800 leading-relaxed">
-        {info.description}
-      </p>
-      {info.rules.length > 0 && (
-        <ul className="mt-3 space-y-1 text-xs text-slate-700">
-          {info.rules.map((r, i) => (
-            <li key={i} className="flex gap-1.5 items-start">
-              <span className="text-emerald-600 shrink-0">●</span>
-              <span>{r}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className="mt-4 text-[11px] text-slate-500 text-center">
-        先生がスタートしたらゲーム画面に切り替わります
-      </p>
-    </div>
-  );
-};
