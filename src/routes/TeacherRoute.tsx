@@ -164,11 +164,6 @@ export const TeacherRoute = () => {
           </div>
 
           <aside className="space-y-4">
-            <ClassForest
-              classes={state.classes}
-              perClassCount={state.perClassCount}
-              totalStudents={state.totalStudents}
-            />
             <Button
               variant="ghost"
               onClick={() => {
