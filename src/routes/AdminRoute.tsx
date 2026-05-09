@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { AdminQuestExport } from '@/components/admin/AdminQuestExport';
 import { AdminSlides } from '@/components/admin/AdminSlides';
+import { AdminSlidesControl } from '@/components/admin/AdminSlidesControl';
 import { AdminImages } from '@/components/admin/AdminImages';
 import { AdminDiagnostics } from '@/components/admin/AdminDiagnostics';
 
@@ -19,7 +20,11 @@ export const AdminRoute = () => {
           <AdminImages />
         </Section>
 
-        <Section title="🎞 スライド管理" tone="rose">
+        <Section title="⏯ スライド進行コントロール" tone="rose">
+          <AdminSlidesControl />
+        </Section>
+
+        <Section title="🎞 スライド管理（追加・削除）" tone="rose">
           <AdminSlides />
         </Section>
 

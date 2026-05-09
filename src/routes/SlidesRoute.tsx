@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listSlides } from '@/lib/slidesDB';
+import { onSlideMessage, sendSlideMessage } from '@/lib/slideControl';
 
 // 表示用に統一された Slide 型（デフォルトデッキ・ローカル両方）
 type DisplaySlide = {
@@ -73,6 +74,53 @@ export const SlidesRoute = () => {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [slides.length]);
+
+  // 管理画面からの遠隔操作を受信
+  useEffect(() => {
+    const off = onSlideMessage((msg) => {
+      if (slides.length === 0) return;
+      switch (msg.type) {
+        case 'goto':
+          setIdx(Math.max(0, Math.min(slides.length - 1, msg.index)));
+          break;
+        case 'next':
+          setIdx((i) => Math.min(slides.length - 1, i + 1));
+          break;
+        case 'prev':
+          setIdx((i) => Math.max(0, i - 1));
+          break;
+        case 'first':
+          setIdx(0);
+          break;
+        case 'last':
+          setIdx(slides.length - 1);
+          break;
+        case 'state-request':
+          // 起動直後の管理画面に現状を通知
+          if (slides[idx]) {
+            sendSlideMessage({
+              type: 'state-update',
+              index: idx,
+              total: slides.length,
+              name: slides[idx].name,
+            });
+          }
+          break;
+      }
+    });
+    return off;
+  }, [slides, idx]);
+
+  // 自タブのインデックス変更を管理画面に通知
+  useEffect(() => {
+    if (slides.length === 0) return;
+    sendSlideMessage({
+      type: 'state-update',
+      index: idx,
+      total: slides.length,
+      name: slides[idx]?.name ?? '',
+    });
+  }, [idx, slides]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
