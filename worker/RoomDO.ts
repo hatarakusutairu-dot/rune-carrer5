@@ -543,13 +543,26 @@ export class RoomDO extends DurableObject<Env> {
     const phases = phasesForSlide(currentName);
     if (this.state.postSlideStep < phases.length) {
       this.state.postSlideStep += 1;
+      const enteredPhase = phases[this.state.postSlideStep - 1];
       // 意見入力フェーズに入った時は2分タイマーを起動
-      if (phases[this.state.postSlideStep - 1] === 'opinion-input') {
+      if (enteredPhase === 'opinion-input') {
         this.state.activeStartedAt = Date.now();
         this.state.activeDurationMs = 120_000;
       } else {
         this.state.activeStartedAt = null;
         this.state.activeDurationMs = null;
+      }
+      // 全ゲーム総合分析フェーズに入った時はクラス集計をブロードキャスト
+      if (enteredPhase === 'stage2-summary') {
+        this.state.phase = 'stage_summary';
+        this.broadcastPhase();
+        const summary = this.computeStageSummary();
+        this.broadcast({
+          type: 'STAGE_SUMMARY',
+          perClass: summary.perClass,
+          overall: summary.overall,
+        });
+        return;
       }
       this.broadcastPhase();
       return;

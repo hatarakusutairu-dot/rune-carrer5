@@ -21,16 +21,14 @@ export const PhaseStudentView = ({ phase }: { phase: PostSlidePhase }) => {
 };
 
 const Stage2PersonalSummary = () => (
-  <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-300 p-4">
-    <h3 className="text-base font-black text-indigo-900">
-      🌳 あなたの全ゲーム総合分析
+  <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-300 p-4 text-center">
+    <div className="text-3xl mb-1">🌳</div>
+    <h3 className="text-sm font-bold text-indigo-900">
+      全ゲーム総合分析
     </h3>
     <p className="text-xs text-slate-600 mt-1">
-      5つのゲームを通して見えてきた強みの芽
+      下にあなたの強みの芽が出ています
     </p>
-    <div className="mt-3 rounded-xl bg-white border-2 border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-      （個人診断結果：実装予定）
-    </div>
   </div>
 );
 
