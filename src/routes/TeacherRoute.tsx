@@ -17,7 +17,6 @@ import { GameIntroCard } from '@/components/common/GameIntroCard';
 import type { GameId } from '@shared/protocol';
 import { Stage3Share } from '@/components/stages/Stage3Share';
 import { Stage4Reveal } from '@/components/stages/Stage4Reveal';
-import { Stage5SkillLink } from '@/components/stages/Stage5SkillLink';
 import { Stage6QuestCard } from '@/components/stages/Stage6QuestCard';
 import { QuestAggregation } from '@/components/teacher/QuestAggregation';
 import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
@@ -125,7 +124,7 @@ export const TeacherRoute = () => {
             {/* Stage 3〜6（lobbyフェーズ） */}
             {phase === 'lobby' && stage === 3 && <Stage3Share variant="teacher" />}
             {phase === 'lobby' && stage === 4 && <Stage4Reveal variant="teacher" />}
-            {phase === 'lobby' && stage === 5 && <Stage5SkillLink variant="teacher" />}
+            {/* Stage 5 はスライド + post-slide phase（意見入力・可視化）で完結 */}
             {phase === 'lobby' && stage === 6 && (
               <>
                 <Stage6QuestCard variant="teacher" />

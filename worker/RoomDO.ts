@@ -58,6 +58,8 @@ interface InternalState {
   questCards: Map<string, { growSkill: string; gameAction: string; schoolAction: string }>;
   // スキル意見（sid → text）
   skillOpinions: Map<string, string>;
+  // ゲームで得られる力（sid → 5短文）
+  gameSkills: Map<string, string[]>;
   // ステージ内サブステップ
   stageStep: number;
   // スライド進行（全クライアント共有）
@@ -86,6 +88,7 @@ interface SerializedState {
   classSids: Array<[string, string[]]>;
   questCards: Array<[string, { growSkill: string; gameAction: string; schoolAction: string }]>;
   skillOpinions: Array<[string, string]>;
+  gameSkills: Array<[string, string[]]>;
   stageStep: number;
   slideIndex: number;
   slideNames: string[];
@@ -109,6 +112,7 @@ const serializeState = (s: InternalState): SerializedState => ({
   classSids: Array.from(s.classSids.entries()).map(([k, v]) => [k, Array.from(v)]),
   questCards: Array.from(s.questCards.entries()),
   skillOpinions: Array.from(s.skillOpinions.entries()),
+  gameSkills: Array.from(s.gameSkills.entries()),
   stageStep: s.stageStep,
   slideIndex: s.slideIndex,
   slideNames: s.slideNames,
@@ -132,6 +136,7 @@ const deserializeState = (o: SerializedState): InternalState => ({
   classSids: new Map((o.classSids ?? []).map(([k, v]) => [k, new Set(v)])),
   questCards: new Map(o.questCards ?? []),
   skillOpinions: new Map(o.skillOpinions ?? []),
+  gameSkills: new Map(o.gameSkills ?? []),
   stageStep: o.stageStep ?? 0,
   slideIndex: o.slideIndex ?? 0,
   slideNames: o.slideNames ?? [],
@@ -198,6 +203,7 @@ export class RoomDO extends DurableObject<Env> {
       classSids: new Map(),
       questCards: new Map(),
       skillOpinions: new Map(),
+      gameSkills: new Map(),
       stageStep: 0,
       slideIndex: 0,
       slideNames: [],
@@ -379,6 +385,9 @@ export class RoomDO extends DurableObject<Env> {
 
       case 'S_SKILL_OPINION':
         return this.sSkillOpinion(ws, msg.text);
+
+      case 'S_GAME_SKILLS':
+        return this.sGameSkills(ws, msg.texts);
 
       case 'S_RETRY':
         // 再挑戦：集計には影響しない、クライアント側で再表示するためのフラグ通知のみ
@@ -633,6 +642,60 @@ export class RoomDO extends DurableObject<Env> {
     if (!text) return;
     this.state.skillOpinions.set(att.sid, text);
     this.broadcastSkillOpinions();
+  }
+
+  private sGameSkills(ws: WebSocket, textsIn: string[]): void {
+    const att = this.getAttachment(ws);
+    if (att?.role !== 'student') {
+      this.sendErr(ws, 'NOT_STUDENT', '生徒のみ送信できます');
+      return;
+    }
+    if (!Array.isArray(textsIn)) return;
+    const texts = textsIn
+      .map((t) => (typeof t === 'string' ? t.trim().slice(0, 30) : ''))
+      .filter((t) => t.length > 0)
+      .slice(0, 5);
+    this.state.gameSkills.set(att.sid, texts);
+    this.broadcastGameSkills();
+  }
+
+  private broadcastGameSkills(): void {
+    // 全提出を flatten。正規化した text でグルーピングしてカウント
+    const groups = new Map<string, { text: string; count: number; classes: Set<string> }>();
+    let totalSubmissions = 0;
+    let totalEntries = 0;
+    const perClass: Record<string, number> = {};
+    for (const cls of this.state.classes) perClass[cls] = 0;
+
+    for (const [sid, texts] of this.state.gameSkills) {
+      const info = this.state.students.get(sid);
+      const cls = info?.className ?? '不明';
+      perClass[cls] = (perClass[cls] ?? 0) + 1;
+      totalSubmissions++;
+      for (const text of texts) {
+        totalEntries++;
+        const norm = text.toLowerCase().replace(/\s+/g, '');
+        const existing = groups.get(norm);
+        if (existing) {
+          existing.count++;
+          existing.classes.add(cls);
+        } else {
+          groups.set(norm, { text, count: 1, classes: new Set([cls]) });
+        }
+      }
+    }
+
+    const items = Array.from(groups.values())
+      .map((g) => ({ text: g.text, count: g.count, classes: Array.from(g.classes) }))
+      .sort((a, b) => b.count - a.count);
+
+    this.broadcast({
+      type: 'GAME_SKILLS_AGG',
+      totalSubmissions,
+      totalEntries,
+      perClass,
+      items,
+    });
   }
 
   private broadcastSkillOpinions(): void {

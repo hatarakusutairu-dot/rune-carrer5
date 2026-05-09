@@ -4,6 +4,7 @@ import { AggregationDisplay } from '@/components/teacher/AggregationDisplay';
 import { ClassAnalysisCard } from '@/components/teacher/ClassAnalysisCard';
 import { QuestAggregation } from '@/components/teacher/QuestAggregation';
 import { CharacterRace } from '@/components/teacher/CharacterRace';
+import { OpinionBubbles } from '@/components/common/OpinionBubbles';
 
 // 講師画面：スライド後フェーズ別 UI
 export const PhaseTeacherView = ({ phase }: { phase: PostSlidePhase }) => {
@@ -62,15 +63,14 @@ const OpinionInputProgress = () => {
 };
 
 const OpinionView = () => (
-  <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 p-5">
-    <h3 className="text-lg font-black text-emerald-900 mb-2">
-      💬 みんなの意見
+  <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 p-5 space-y-3">
+    <h3 className="text-lg font-black text-emerald-900">
+      💬 みんなの意見：ゲームで得られる力
     </h3>
-    <div className="rounded-xl bg-white border-2 border-dashed border-slate-300 p-6 text-center text-slate-500 text-sm">
-      （バブル可視化：実装予定）
-      <br />
-      ▶ 次へ で先へ進めます
-    </div>
+    <OpinionBubbles />
+    <p className="text-[11px] text-slate-500">
+      よく出た意見ほど大きいバブルで表示。同じ意見は自動でまとめています。
+    </p>
   </div>
 );
 

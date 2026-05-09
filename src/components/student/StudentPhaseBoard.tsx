@@ -12,7 +12,6 @@ import { usePostSlidePhase } from '@/lib/usePostSlidePhase';
 import { Stage2PersonalResult } from '@/components/stages/Stage2PersonalResult';
 import { Stage3Share } from '@/components/stages/Stage3Share';
 import { Stage4Reveal } from '@/components/stages/Stage4Reveal';
-import { Stage5SkillLink } from '@/components/stages/Stage5SkillLink';
 import { Stage6QuestCard } from '@/components/stages/Stage6QuestCard';
 import { getMyAnswer } from '@/lib/myAnswers';
 import { GameIntroCard } from '@/components/common/GameIntroCard';
@@ -126,7 +125,7 @@ export const StudentPhaseBoard = () => {
       {/* Stage 3 〜 6（lobbyフェーズ）：ステージ固有 */}
       {isStageContent && currentStage === 3 && <Stage3Share variant="student" />}
       {isStageContent && currentStage === 4 && <Stage4Reveal variant="student" />}
-      {isStageContent && currentStage === 5 && <Stage5SkillLink variant="student" />}
+      {/* Stage 5 はスライド + post-slide phase（意見入力・可視化）で完結。lobby box は出さない */}
       {isStageContent && currentStage === 6 && <Stage6QuestCard variant="student" />}
 
       {phase === 'closed' && (

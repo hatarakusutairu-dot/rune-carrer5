@@ -176,6 +176,14 @@ export type ServerMsg =
       // 単語頻度（簡易ワードクラウド用）
       wordCounts: Record<string, number>;
     }
+  | {
+      type: 'GAME_SKILLS_AGG';
+      totalSubmissions: number;        // 提出した生徒数
+      totalEntries: number;            // 提出された短文の総数
+      perClass: Record<string, number>;
+      // バブル可視化用：類似テキストでグルーピングした結果
+      items: Array<{ text: string; count: number; classes: string[] }>;
+    }
   | { type: 'REACTION_BURST'; emoji: ReactionEmoji; ts: number }
   | { type: 'ERROR'; code: string; message: string }
   | { type: 'PONG' };

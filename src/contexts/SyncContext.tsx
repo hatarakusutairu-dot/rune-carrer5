@@ -59,6 +59,13 @@ interface SyncContextValue {
     opinions: Array<{ className: string; text: string }>;
     wordCounts: Record<string, number>;
   } | null;
+  // ゲームで得られる力（5短文）の集計
+  gameSkills: {
+    totalSubmissions: number;
+    totalEntries: number;
+    perClass: Record<string, number>;
+    items: Array<{ text: string; count: number; classes: string[] }>;
+  } | null;
   // 進捗（PROGRESSメッセージから）
   progress: {
     gameId: string | null;
@@ -101,6 +108,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const [stageSummary, setStageSummary] = useState<SyncContextValue['stageSummary']>(null);
   const [questAgg, setQuestAgg] = useState<SyncContextValue['questAgg']>(null);
   const [skillOpinions, setSkillOpinions] = useState<SyncContextValue['skillOpinions']>(null);
+  const [gameSkills, setGameSkills] = useState<SyncContextValue['gameSkills']>(null);
   const [progress, setProgress] = useState<SyncContextValue['progress']>({
     gameId: null,
     count: 0,
@@ -173,6 +181,14 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
           perClass: msg.perClass,
           opinions: msg.opinions,
           wordCounts: msg.wordCounts,
+        });
+        break;
+      case 'GAME_SKILLS_AGG':
+        setGameSkills({
+          totalSubmissions: msg.totalSubmissions,
+          totalEntries: msg.totalEntries,
+          perClass: msg.perClass,
+          items: msg.items,
         });
         break;
       case 'REACTION_BURST': {
@@ -275,6 +291,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     setStageSummary(null);
     setQuestAgg(null);
     setSkillOpinions(null);
+    setGameSkills(null);
     setReactionBursts([]);
     setLastError(null);
     sessionStorage.removeItem(TEACHER_TOKEN_KEY);
@@ -313,6 +330,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       stageSummary,
       questAgg,
       skillOpinions,
+      gameSkills,
       progress,
       reactionBursts,
       createRoom,
@@ -335,6 +353,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       stageSummary,
       questAgg,
       skillOpinions,
+      gameSkills,
       progress,
       reactionBursts,
       createRoom,
