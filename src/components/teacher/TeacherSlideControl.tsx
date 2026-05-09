@@ -133,9 +133,9 @@ export const TeacherSlideControl = () => {
   }
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-rose-100 via-orange-50 to-amber-50 border-2 border-rose-300 p-3 sm:p-4">
+    <div className="rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 border-2 border-emerald-200 p-3 sm:p-4">
       <div className="flex items-baseline justify-between mb-2">
-        <h3 className="text-sm sm:text-base font-bold text-rose-900">
+        <h3 className="text-sm sm:text-base font-bold text-emerald-900">
           🎬 スライド進行
         </h3>
         <span className="text-xs text-slate-600 tabular-nums">
@@ -178,7 +178,7 @@ export const TeacherSlideControl = () => {
               <button
                 onClick={goNext}
                 disabled={isLast && !nextPhase}
-                className="px-8 py-3 rounded-xl bg-rose-600/90 backdrop-blur text-white font-black text-lg disabled:opacity-50 hover:bg-rose-700"
+                className="px-8 py-3 rounded-xl bg-teal-600/90 backdrop-blur text-white font-black text-lg disabled:opacity-50 hover:bg-teal-700"
               >
                 {nextLabel}
               </button>
@@ -232,14 +232,14 @@ export const TeacherSlideControl = () => {
         <button
           onClick={goPrev}
           disabled={isFirst}
-          className="col-span-1 py-3 rounded-xl bg-white border-2 border-rose-300 text-rose-800 font-bold text-base hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="col-span-1 py-3 rounded-xl bg-white border-2 border-emerald-300 text-emerald-800 font-bold text-base hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ◀ 戻る
         </button>
         <button
           onClick={goNext}
           disabled={isLast && !nextPhase}
-          className="col-span-3 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-lg sm:text-xl shadow disabled:opacity-50 disabled:cursor-not-allowed"
+          className="col-span-3 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-lg sm:text-xl shadow disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {nextLabel}
         </button>
