@@ -19,6 +19,7 @@ import {
   SEED_ORDER,
 } from '@shared/scoring';
 import { slideContextOf } from '@shared/slideContext';
+import { phasesForSlide } from '@shared/slidePhases';
 
 interface Env {
   ROOM: DurableObjectNamespace;
@@ -63,6 +64,8 @@ interface InternalState {
   slideIndex: number;
   // スライドファイル名（manifest.json から取り込み、Stage/Game連動判定に使う）
   slideNames: string[];
+  // スライド後フェーズステップ（0=スライド表示、>=1=フェーズ）
+  postSlideStep: number;
 }
 
 interface SerializedState {
@@ -84,6 +87,7 @@ interface SerializedState {
   stageStep: number;
   slideIndex: number;
   slideNames: string[];
+  postSlideStep: number;
 }
 
 const serializeState = (s: InternalState): SerializedState => ({
@@ -105,6 +109,7 @@ const serializeState = (s: InternalState): SerializedState => ({
   stageStep: s.stageStep,
   slideIndex: s.slideIndex,
   slideNames: s.slideNames,
+  postSlideStep: s.postSlideStep,
 });
 
 const deserializeState = (o: SerializedState): InternalState => ({
@@ -126,6 +131,7 @@ const deserializeState = (o: SerializedState): InternalState => ({
   stageStep: o.stageStep ?? 0,
   slideIndex: o.slideIndex ?? 0,
   slideNames: o.slideNames ?? [],
+  postSlideStep: o.postSlideStep ?? 0,
 });
 
 const generateToken = (): string => {
@@ -190,6 +196,7 @@ export class RoomDO extends DurableObject<Env> {
       stageStep: 0,
       slideIndex: 0,
       slideNames: [],
+      postSlideStep: 0,
     };
   }
 
@@ -213,6 +220,7 @@ export class RoomDO extends DurableObject<Env> {
       serverTime: Date.now(),
       stageStep: this.state.stageStep,
       slideIndex: this.state.slideIndex,
+      postSlideStep: this.state.postSlideStep,
     };
   }
 
@@ -330,10 +338,10 @@ export class RoomDO extends DurableObject<Env> {
         return this.tPrevStep(ws);
 
       case 'T_NEXT_SLIDE':
-        return this.tGotoSlide(ws, this.state.slideIndex + 1);
+        return this.tNextSlide(ws);
 
       case 'T_PREV_SLIDE':
-        return this.tGotoSlide(ws, this.state.slideIndex - 1);
+        return this.tPrevSlide(ws);
 
       case 'T_GOTO_SLIDE':
         return this.tGotoSlide(ws, msg.index);
@@ -499,6 +507,40 @@ export class RoomDO extends DurableObject<Env> {
     this.broadcastPhase();
   }
 
+  // ▶ 次へ：まずスライド後フェーズを進め、フェーズが終われば次のスライドへ
+  private tNextSlide(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    const currentName = this.state.slideNames[this.state.slideIndex] ?? '';
+    const phases = phasesForSlide(currentName);
+    if (this.state.postSlideStep < phases.length) {
+      this.state.postSlideStep += 1;
+      // 意見入力フェーズに入った時は2分タイマーを起動
+      if (phases[this.state.postSlideStep - 1] === 'opinion-input') {
+        this.state.activeStartedAt = Date.now();
+        this.state.activeDurationMs = 120_000;
+      } else {
+        this.state.activeStartedAt = null;
+        this.state.activeDurationMs = null;
+      }
+      this.broadcastPhase();
+      return;
+    }
+    this.tGotoSlide(ws, this.state.slideIndex + 1);
+  }
+
+  // ◀ 戻る：フェーズ中ならフェーズを戻す
+  private tPrevSlide(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    if (this.state.postSlideStep > 0) {
+      this.state.postSlideStep -= 1;
+      this.state.activeStartedAt = null;
+      this.state.activeDurationMs = null;
+      this.broadcastPhase();
+      return;
+    }
+    this.tGotoSlide(ws, this.state.slideIndex - 1);
+  }
+
   // スライド遷移（▶ 次へボタンの中核）
   // ファイル名から slide context を取り、Stage / Game ID をヒントとして同期する
   // ゲームは自動開始しない（講師が「開始ボタン」で明示的に始める）
@@ -508,12 +550,14 @@ export class RoomDO extends DurableObject<Env> {
     if (total === 0) {
       // スライド未登録でも index は動かす
       this.state.slideIndex = Math.max(0, rawIndex);
+      this.state.postSlideStep = 0;
       this.broadcastPhase();
       return;
     }
     const idx = Math.max(0, Math.min(total - 1, rawIndex));
-    if (idx === this.state.slideIndex) return;
+    if (idx === this.state.slideIndex && this.state.postSlideStep === 0) return;
     this.state.slideIndex = idx;
+    this.state.postSlideStep = 0;
 
     // スライド変更時はフェーズを lobby に戻す（ゲーム中なら強制停止）
     this.state.phase = 'lobby';

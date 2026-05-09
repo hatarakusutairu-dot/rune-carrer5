@@ -67,6 +67,8 @@ export interface PublicRoomState {
   stageStep: number;
   // スライド進行（全クライアント共有、講師が「次へ」で進める）
   slideIndex: number;
+  // スライド後フェーズのステップ（0=スライド表示、>=1=フェーズ進行中）
+  postSlideStep: number;
 }
 
 export interface PerClassAggregation {
@@ -112,6 +114,7 @@ export type ClientMsg =
   | { type: 'S_JOIN'; code: string; className: string; sid?: string }
   | { type: 'S_QUEST'; growSkill: string; gameAction: string; schoolAction: string }
   | { type: 'S_SKILL_OPINION'; text: string }
+  | { type: 'S_GAME_SKILLS'; texts: string[] }
   | { type: 'S_ANSWER'; gameId: GameId; payload: AnswerPayload }
   | { type: 'S_RETRY'; gameId: GameId }
   // 共通

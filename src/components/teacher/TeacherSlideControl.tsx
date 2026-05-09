@@ -2,6 +2,16 @@ import { useEffect, useState } from 'react';
 import { useSync } from '@/contexts/SyncContext';
 import { slideContextOf } from '@shared/slideContext';
 import { DEFAULT_GAME_DURATION } from '@shared/scoring';
+import { currentPhaseFor, phasesForSlide, type PostSlidePhase } from '@shared/slidePhases';
+
+const PHASE_LABELS: Record<PostSlidePhase, string> = {
+  'stage2-summary': '全体分析を表示',
+  'opinion-input': '意見収集（5短文・2分）',
+  'opinion-view': 'みんなの意見を表示',
+  'quest-input': 'My Quest 入力',
+  'quest-view': 'みんなのクエストを表示',
+  'survey-qr': 'アンケートQRを表示',
+};
 
 const GAME_LABELS: Record<string, string> = {
   balloon: '🎈 風船リスク',
@@ -47,10 +57,26 @@ export const TeacherSlideControl = () => {
   const ctx = currentName ? slideContextOf(currentName) : {};
   const slideGameId = ctx.gameId;
   const phase = state.phase;
-  // ゲーム開始ボタンを出す条件：ゲームスライド & ゲーム未開始 (lobby)
-  const showStartButton = !!slideGameId && phase === 'lobby';
+  const postSlideStep = state.postSlideStep ?? 0;
+  const inPhase = postSlideStep > 0;
+  const currentPhase = currentName ? currentPhaseFor(currentName, postSlideStep) : null;
+  const phases = currentName ? phasesForSlide(currentName) : [];
+  const nextPhase: PostSlidePhase | null =
+    !inPhase && phases.length > 0
+      ? phases[0]
+      : inPhase && postSlideStep < phases.length
+        ? phases[postSlideStep]
+        : null;
+  // ゲーム開始ボタンを出す条件：ゲームスライド & ゲーム未開始 (lobby) & フェーズに入っていない
+  const showStartButton = !!slideGameId && phase === 'lobby' && !inPhase;
   // ゲーム実行中の表示
   const isGameActive = phase === 'intro' || phase === 'active';
+  // ▶ボタンのラベル
+  const nextLabel = nextPhase
+    ? `▶ ${PHASE_LABELS[nextPhase]} へ`
+    : isLast
+      ? '完了'
+      : '▶ 次へ進む';
 
   const startGame = () => {
     if (!slideGameId) return;
@@ -84,8 +110,8 @@ export const TeacherSlideControl = () => {
         </span>
       </div>
 
-      {/* プレビュー */}
-      {currentName && (
+      {/* プレビュー（スライド表示中のみ） */}
+      {currentName && !inPhase && (
         <div className="rounded-xl bg-black overflow-hidden shadow-inner mb-3">
           <div className="aspect-video flex items-center justify-center">
             <img
@@ -93,6 +119,21 @@ export const TeacherSlideControl = () => {
               alt={currentName}
               className="max-w-full max-h-full object-contain"
             />
+          </div>
+        </div>
+      )}
+
+      {/* フェーズ中の表示（プレビュー代わり） */}
+      {inPhase && currentPhase && (
+        <div className="rounded-xl bg-gradient-to-br from-violet-100 to-rose-100 border-2 border-violet-300 p-4 mb-3 text-center">
+          <div className="text-xs text-violet-600 font-bold tracking-wider">
+            進行中フェーズ
+          </div>
+          <div className="text-lg font-black text-violet-900 mt-1">
+            {PHASE_LABELS[currentPhase]}
+          </div>
+          <div className="text-xs text-slate-600 mt-1">
+            （下のメインエリアで操作中）
           </div>
         </div>
       )}
@@ -128,10 +169,10 @@ export const TeacherSlideControl = () => {
         </button>
         <button
           onClick={goNext}
-          disabled={isLast}
+          disabled={isLast && !nextPhase}
           className="col-span-3 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-lg sm:text-xl shadow disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          ▶ 次へ進む
+          {nextLabel}
         </button>
       </div>
 

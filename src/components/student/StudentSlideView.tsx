@@ -19,6 +19,8 @@ export const StudentSlideView = () => {
   if (!state || slideNames.length === 0) return null;
   // ゲーム実行中・カウントダウン中は出さない（ゲームに集中させる）
   if (state.phase === 'active' || state.phase === 'intro') return null;
+  // スライド後フェーズ中も非表示（フェーズUIに譲る）
+  if ((state.postSlideStep ?? 0) > 0) return null;
 
   const idx = Math.min(slideNames.length - 1, Math.max(0, state.slideIndex ?? 0));
   const name = slideNames[idx];

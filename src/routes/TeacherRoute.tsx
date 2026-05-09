@@ -21,6 +21,8 @@ import { Stage6QuestCard } from '@/components/stages/Stage6QuestCard';
 import { QuestAggregation } from '@/components/teacher/QuestAggregation';
 import { restoreTeacherSession, useSync } from '@/contexts/SyncContext';
 import { TeacherSlideControl } from '@/components/teacher/TeacherSlideControl';
+import { PhaseTeacherView } from '@/components/teacher/PhaseTeacherView';
+import { usePostSlidePhase } from '@/lib/usePostSlidePhase';
 
 export const TeacherRoute = () => {
   const { state, conn, myRole, teacherToken, resumeAsTeacher, reset, send } = useSync();
@@ -54,6 +56,23 @@ export const TeacherRoute = () => {
   const inRoom = !!(state && teacherToken && myRole === 'teacher');
   const phase = state?.phase ?? 'lobby';
   const stage = state?.currentStage ?? 0;
+  const { phase: postSlidePhase } = usePostSlidePhase();
+
+  // 意見入力フェーズの2分タイマー自動切り替え
+  useEffect(() => {
+    if (postSlidePhase !== 'opinion-input') return;
+    if (!state?.activeStartedAt || !state?.activeDurationMs) return;
+    const expiresAt = state.activeStartedAt + state.activeDurationMs;
+    const remaining = expiresAt - Date.now();
+    if (remaining <= 0) {
+      send({ type: 'T_NEXT_SLIDE' });
+      return;
+    }
+    const t = window.setTimeout(() => {
+      send({ type: 'T_NEXT_SLIDE' });
+    }, remaining);
+    return () => window.clearTimeout(t);
+  }, [postSlidePhase, state?.activeStartedAt, state?.activeDurationMs, send]);
 
   return (
     <Layout title="講師モード" subtitle={inRoom ? `参加コード ${state.code}` : '60分授業の進行管理'}>
@@ -70,6 +89,9 @@ export const TeacherRoute = () => {
 
             {/* スライド進行（最重要：▶ 次へ で全部進む） */}
             <TeacherSlideControl />
+
+            {/* スライド後フェーズ（全体分析・意見収集・クエスト・QR） */}
+            {postSlidePhase && <PhaseTeacherView phase={postSlidePhase} />}
 
             {/* Stage 0：ミッション表示（lobbyフェーズ） */}
             {phase === 'lobby' && stage === 0 && <Stage0Mission variant="teacher" />}

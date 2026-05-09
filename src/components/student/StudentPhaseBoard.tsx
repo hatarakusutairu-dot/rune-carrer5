@@ -7,6 +7,8 @@ import { GameContainer } from '@/games/GameContainer';
 import { CountdownBig } from '@/components/common/CountdownBig';
 import { WaitingScene } from '@/components/student/WaitingScene';
 import { StudentSlideView } from '@/components/student/StudentSlideView';
+import { PhaseStudentView } from '@/components/student/PhaseStudentView';
+import { usePostSlidePhase } from '@/lib/usePostSlidePhase';
 import { Stage0Mission } from '@/components/stages/Stage0Mission';
 import { Stage2PersonalResult } from '@/components/stages/Stage2PersonalResult';
 import { Stage3Share } from '@/components/stages/Stage3Share';
@@ -48,8 +50,11 @@ export const StudentPhaseBoard = () => {
         <span>{state.totalStudents}人入室中</span>
       </div>
 
-      {/* スライドプレビュー（講師進行に追従、ゲーム中は非表示） */}
+      {/* スライドプレビュー（講師進行に追従、ゲーム中・フェーズ中は非表示） */}
       <StudentSlideView />
+
+      {/* スライド後フェーズ（個人分析・意見入力・クエスト・QR） */}
+      <PhaseSection />
 
       {/* Stage 0：ミッション */}
       {phase === 'lobby' && currentStage === 0 && (
@@ -120,6 +125,17 @@ export const StudentPhaseBoard = () => {
       <div className="mt-3">
         <ReactionBar />
       </div>
+    </div>
+  );
+};
+
+// 現在のフェーズに応じてフェーズ専用UIを描画
+const PhaseSection = () => {
+  const { phase } = usePostSlidePhase();
+  if (!phase) return null;
+  return (
+    <div className="mb-3">
+      <PhaseStudentView phase={phase} />
     </div>
   );
 };
