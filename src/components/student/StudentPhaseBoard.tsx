@@ -9,7 +9,6 @@ import { WaitingScene } from '@/components/student/WaitingScene';
 import { StudentSlideView } from '@/components/student/StudentSlideView';
 import { PhaseStudentView } from '@/components/student/PhaseStudentView';
 import { usePostSlidePhase } from '@/lib/usePostSlidePhase';
-import { Stage0Mission } from '@/components/stages/Stage0Mission';
 import { Stage2PersonalResult } from '@/components/stages/Stage2PersonalResult';
 import { Stage3Share } from '@/components/stages/Stage3Share';
 import { Stage4Reveal } from '@/components/stages/Stage4Reveal';
@@ -76,11 +75,6 @@ export const StudentPhaseBoard = () => {
 
       {/* スライド後フェーズ（個人分析・意見入力・クエスト・QR） */}
       <PhaseSection />
-
-      {/* Stage 0：ミッション */}
-      {phase === 'lobby' && currentStage === 0 && (
-        <Stage0Mission variant="student" />
-      )}
 
       {/* Stage 1 (current = 1) のフェーズ別表示 */}
       {currentStage === 1 && phase === 'lobby' && (

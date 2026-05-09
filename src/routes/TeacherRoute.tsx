@@ -13,7 +13,6 @@ import { AggregationDisplay } from '@/components/teacher/AggregationDisplay';
 import { ClassAnalysisCard } from '@/components/teacher/ClassAnalysisCard';
 import { GameResultBurst } from '@/components/teacher/GameResultBurst';
 import { CountdownBig } from '@/components/common/CountdownBig';
-import { Stage0Mission } from '@/components/stages/Stage0Mission';
 import { Stage3Share } from '@/components/stages/Stage3Share';
 import { Stage4Reveal } from '@/components/stages/Stage4Reveal';
 import { Stage5SkillLink } from '@/components/stages/Stage5SkillLink';
@@ -115,9 +114,6 @@ export const TeacherRoute = () => {
 
             {/* スライド後フェーズ（全体分析・意見収集・クエスト・QR） */}
             {postSlidePhase && <PhaseTeacherView phase={postSlidePhase} />}
-
-            {/* Stage 0：ミッション表示（lobbyフェーズ） */}
-            {phase === 'lobby' && stage === 0 && <Stage0Mission variant="teacher" />}
 
             {/* Stage 3〜6（lobbyフェーズ） */}
             {phase === 'lobby' && stage === 3 && <Stage3Share variant="teacher" />}
