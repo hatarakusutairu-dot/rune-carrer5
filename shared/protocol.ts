@@ -69,6 +69,8 @@ export interface PublicRoomState {
   slideIndex: number;
   // スライド後フェーズのステップ（0=スライド表示、>=1=フェーズ進行中）
   postSlideStep: number;
+  // 授業開始フラグ（false=入室待機画面、true=スライド進行）
+  classStarted: boolean;
 }
 
 export interface PerClassAggregation {
@@ -108,6 +110,7 @@ export type ClientMsg =
   | { type: 'T_PREV_SLIDE' }
   | { type: 'T_GOTO_SLIDE'; index: number }
   | { type: 'T_SET_SLIDE_DECK'; names: string[] }
+  | { type: 'T_START_CLASS' }
   | { type: 'T_CLOSE_ROOM' }
   // 生徒
   | { type: 'S_PEEK'; code: string }

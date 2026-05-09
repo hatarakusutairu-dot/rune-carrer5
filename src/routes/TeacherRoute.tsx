@@ -82,11 +82,34 @@ export const TeacherRoute = () => {
 
       {!inRoom ? (
         <RoomCreateForm />
+      ) : !state.classStarted ? (
+        // 入室待機画面：参加コードを大きく + 授業開始ボタン
+        <div className="max-w-3xl space-y-4">
+          <RoomCodeDisplay code={state.code} />
+          <ClassForest
+            classes={state.classes}
+            perClassCount={state.perClassCount}
+            totalStudents={state.totalStudents}
+          />
+          <button
+            onClick={() => send({ type: 'T_START_CLASS' })}
+            className="w-full py-6 rounded-2xl bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-700 hover:to-orange-600 text-white font-black text-2xl shadow-lg"
+          >
+            🎬 授業開始（スライド1枚目から表示）
+          </button>
+          <p className="text-xs text-slate-500 text-center">
+            生徒の入室が揃ったら押してください。押すまで生徒画面は入室待ち状態です。
+          </p>
+        </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3 max-w-7xl">
-          <div className="lg:col-span-2 space-y-4">
-            <RoomCodeDisplay code={state.code} />
+          {/* 隅にコードを小さく */}
+          <div className="absolute right-20 top-4 px-2 py-1 rounded bg-white/80 border border-slate-200 text-xs">
+            <span className="text-slate-500">コード </span>
+            <span className="font-bold tabular-nums">{state.code}</span>
+          </div>
 
+          <div className="lg:col-span-2 space-y-4">
             {/* スライド進行（最重要：▶ 次へ で全部進む） */}
             <TeacherSlideControl />
 

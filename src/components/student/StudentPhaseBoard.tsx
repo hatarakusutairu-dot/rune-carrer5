@@ -27,6 +27,27 @@ export const StudentPhaseBoard = () => {
 
   if (!state) return null;
 
+  // 授業開始前：入室待機画面
+  if (!state.classStarted) {
+    return (
+      <div className="max-w-md">
+        <div className="flex items-center justify-between text-xs text-slate-500 mb-2 px-1">
+          <span>クラス：{myClass}</span>
+          <span>{state.totalStudents}人入室中</span>
+        </div>
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 border border-emerald-200 p-8 text-center">
+          <div className="text-6xl mb-3">🌱</div>
+          <p className="text-lg font-bold text-emerald-900">入室完了！</p>
+          <p className="mt-2 text-sm text-slate-600">
+            先生が「授業開始」を押すと
+            <br />
+            最初のスライドが表示されます
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const { phase, currentStage, currentGameId, introCountdownAt } = state;
   // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   answeredKey;

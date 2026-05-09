@@ -66,6 +66,8 @@ interface InternalState {
   slideNames: string[];
   // スライド後フェーズステップ（0=スライド表示、>=1=フェーズ）
   postSlideStep: number;
+  // 授業開始フラグ（true=スライド進行開始）
+  classStarted: boolean;
 }
 
 interface SerializedState {
@@ -88,6 +90,7 @@ interface SerializedState {
   slideIndex: number;
   slideNames: string[];
   postSlideStep: number;
+  classStarted: boolean;
 }
 
 const serializeState = (s: InternalState): SerializedState => ({
@@ -110,6 +113,7 @@ const serializeState = (s: InternalState): SerializedState => ({
   slideIndex: s.slideIndex,
   slideNames: s.slideNames,
   postSlideStep: s.postSlideStep,
+  classStarted: s.classStarted,
 });
 
 const deserializeState = (o: SerializedState): InternalState => ({
@@ -132,6 +136,7 @@ const deserializeState = (o: SerializedState): InternalState => ({
   slideIndex: o.slideIndex ?? 0,
   slideNames: o.slideNames ?? [],
   postSlideStep: o.postSlideStep ?? 0,
+  classStarted: o.classStarted ?? false,
 });
 
 const generateToken = (): string => {
@@ -197,6 +202,7 @@ export class RoomDO extends DurableObject<Env> {
       slideIndex: 0,
       slideNames: [],
       postSlideStep: 0,
+      classStarted: false,
     };
   }
 
@@ -221,6 +227,7 @@ export class RoomDO extends DurableObject<Env> {
       stageStep: this.state.stageStep,
       slideIndex: this.state.slideIndex,
       postSlideStep: this.state.postSlideStep,
+      classStarted: this.state.classStarted,
     };
   }
 
@@ -348,6 +355,9 @@ export class RoomDO extends DurableObject<Env> {
 
       case 'T_SET_SLIDE_DECK':
         return this.tSetSlideDeck(ws, msg.names);
+
+      case 'T_START_CLASS':
+        return this.tStartClass(ws);
 
       case 'T_CLOSE_ROOM':
         return this.tCloseRoom(ws);
@@ -494,6 +504,16 @@ export class RoomDO extends DurableObject<Env> {
   private tPrevStep(ws: WebSocket): void {
     if (!this.requireTeacher(ws)) return;
     this.state.stageStep = Math.max(0, this.state.stageStep - 1);
+    this.broadcastPhase();
+  }
+
+  // 「授業開始」ボタン → スライド表示モードに突入
+  private tStartClass(ws: WebSocket): void {
+    if (!this.requireTeacher(ws)) return;
+    if (this.state.classStarted) return;
+    this.state.classStarted = true;
+    this.state.slideIndex = 0;
+    this.state.postSlideStep = 0;
     this.broadcastPhase();
   }
 
