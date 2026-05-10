@@ -27,7 +27,7 @@ export const CodeEntry = ({ initialCode, onSubmit, busy, errorMessage }: CodeEnt
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md">
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto">
       <div className="rounded-2xl bg-white border border-slate-200 p-6">
         <h2 className="text-xl font-bold">参加コードを入力</h2>
         <p className="mt-1 text-sm text-slate-600">先生から教えてもらった6桁の数字</p>

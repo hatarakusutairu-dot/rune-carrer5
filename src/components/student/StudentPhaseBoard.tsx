@@ -30,7 +30,7 @@ export const StudentPhaseBoard = () => {
   // 授業開始前：入室待機画面
   if (!state.classStarted) {
     return (
-      <div className="max-w-md">
+      <div className="max-w-md sm:max-w-xl lg:max-w-2xl mx-auto">
         <div className="flex items-center justify-between text-xs text-slate-500 mb-2 px-1">
           <span>クラス：{myClass}</span>
           <span>{state.totalStudents}人入室中</span>

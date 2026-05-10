@@ -11,7 +11,7 @@ export const ClassSelector = ({ classes, onConfirm, busy }: ClassSelectorProps) 
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
-    <div className="max-w-md">
+    <div className="max-w-md mx-auto">
       <div className="rounded-2xl bg-white border border-slate-200 p-6">
         <h2 className="text-xl font-bold">あなたのクラスを選んでね</h2>
         <p className="mt-1 text-sm text-slate-600">

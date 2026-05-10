@@ -88,7 +88,7 @@ export const StudentRoute = () => {
       )}
 
       {phase === 'choose_class' && state && (
-        <div className="max-w-md">
+        <div className="max-w-md mx-auto">
           <button onClick={handleBack} className="text-xs text-slate-500 hover:underline">
             ← コードを変更
           </button>
@@ -108,7 +108,7 @@ export const StudentRoute = () => {
       {phase === 'in_room' && <StudentPhaseBoard />}
 
       {(phase === 'in_room' || phase === 'choose_class') && (
-        <div className="mt-6">
+        <div className="mt-6 max-w-md sm:max-w-xl lg:max-w-2xl mx-auto">
           <Button
             variant="ghost"
             onClick={() => {
