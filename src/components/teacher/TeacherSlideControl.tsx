@@ -6,7 +6,7 @@ import { currentPhaseFor, phasesForSlide, type PostSlidePhase } from '@shared/sl
 
 const PHASE_LABELS: Record<PostSlidePhase, string> = {
   'stage2-summary': '全体分析を表示',
-  'opinion-input': '意見収集（5短文・2分）',
+  'opinion-input': '意見収集（8短文・5分）',
   'opinion-view': 'みんなの意見を表示',
   'quest-input': 'My Quest 入力',
   'quest-view': 'みんなのクエストを表示',

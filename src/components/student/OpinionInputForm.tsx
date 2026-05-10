@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSync } from '@/contexts/SyncContext';
 
-const SLOT_COUNT = 5;
+const SLOT_COUNT = 8;
 
 // 生徒：5短文意見入力フォーム（2分タイマー、講師の▶で締切でも可）
 export const OpinionInputForm = () => {
@@ -50,7 +50,7 @@ export const OpinionInputForm = () => {
           ✏️ ゲームで得られる力は何があるだろう？
         </h3>
         <p className="text-xs text-slate-700 mt-1">
-          思いついた力を5つまで（30文字以内 / 1個ずつ）。
+          思いついた力を8つまで（30文字以内 / 1個ずつ）。
           途中送信もOK、後から追加で送れば上書きされます。
         </p>
       </div>

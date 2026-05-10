@@ -53,7 +53,7 @@ const OpinionInputProgress = () => {
           ✏️ 意見収集中：「ゲームで得られる力は何だろう？」
         </h3>
         <p className="text-sm text-slate-700 mt-1">
-          各生徒が5つの短文を入力中。2分タイマー、または ▶ 次へ で締切。
+          各生徒が8つの短文を入力中。5分タイマー、または ▶ 次へ で締切。
         </p>
         {expiresAt && <CountdownDisplay expiresAt={expiresAt} />}
       </div>
