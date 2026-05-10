@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { Button } from '@/components/common/Button';
 import { useSync } from '@/contexts/SyncContext';
 
-const PRESET_HINTS = ['梅田大,梅田小,名古屋', '高1A,高1B', '本校,分校'];
+const PRESET_HINTS = [
+  '梅田大,梅田小',
+  '梅田大,梅田小,名古屋',
+  '梅田大,梅田小,名古屋,博多',
+  '梅田大,梅田小,博多',
+];
 
 export const RoomCreateForm = () => {
   const { createRoom, conn, lastError } = useSync();
