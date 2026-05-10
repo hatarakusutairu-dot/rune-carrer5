@@ -120,15 +120,21 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
       {phase === 'show' && (
         <div className="py-8 text-center">
           <div className="text-xs text-slate-500 mb-2">覚えてください（{len}桁）</div>
-          <div className="text-5xl font-black tracking-[0.4em] tabular-nums select-none">
+          <div className="text-3xl sm:text-4xl md:text-5xl font-black tracking-[0.1em] sm:tracking-[0.25em] md:tracking-[0.4em] tabular-nums select-none break-all leading-relaxed">
             {digits}
           </div>
         </div>
       )}
       {phase === 'input' && (
-        <div className="py-3">
+        <form
+          className="py-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
           <div className="text-xs text-slate-500 mb-2 text-center">
-            さっきの数字を入力（{len}桁）
+            さっきの数字を入力（{len}桁） / Enterで送信
           </div>
           <input
             type="tel"
@@ -136,16 +142,16 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
             value={input}
             onChange={(e) => setInput(e.target.value.replace(/[^0-9]/g, '').slice(0, len))}
             autoFocus
-            className="w-full text-center text-3xl tracking-[0.4em] font-black tabular-nums rounded-xl border-2 border-slate-300 px-3 py-3 focus:border-teal-500 outline-none"
+            className="w-full text-center text-2xl sm:text-3xl tracking-[0.15em] sm:tracking-[0.3em] font-black tabular-nums rounded-xl border-2 border-slate-300 px-3 py-3 focus:border-teal-500 outline-none"
           />
           <button
-            onClick={submit}
+            type="submit"
             disabled={input.length !== len}
             className="mt-3 w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-bold"
           >
             送信
           </button>
-        </div>
+        </form>
       )}
       {phase === 'feedback' && (
         <div className="py-8 text-center">
