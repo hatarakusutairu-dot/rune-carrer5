@@ -161,7 +161,7 @@ export const DEFAULT_GAME_DURATION: Record<GameId, number> = {
   digit_span: 90_000,
   card_decks: 120_000,
   emotion_match: 70_000,
-  money_split: 60_000,
+  money_split: 120_000,
   stop_signal: 90_000,
   pattern_match: 80_000,
   towers: 120_000,
