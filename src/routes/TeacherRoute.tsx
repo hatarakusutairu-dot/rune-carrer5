@@ -102,78 +102,77 @@ export const TeacherRoute = () => {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3 max-w-7xl mx-auto">
+        <div className="max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto space-y-4 relative">
           {/* 隅にコードを小さく */}
-          <div className="absolute right-20 top-4 px-2 py-1 rounded bg-white/80 border border-slate-200 text-xs">
+          <div className="absolute right-0 -top-2 px-2 py-1 rounded bg-white/80 border border-slate-200 text-xs">
             <span className="text-slate-500">コード </span>
             <span className="font-bold tabular-nums">{state.code}</span>
           </div>
 
-          <div className="lg:col-span-2 space-y-4">
-            {/* スライド進行（最重要：▶ 次へ で全部進む） */}
-            <TeacherSlideControl />
+          {/* スライド進行（最重要：▶ 次へ で全部進む） */}
+          <TeacherSlideControl />
 
-            {/* スライド後フェーズ（全体分析・意見収集・クエスト・QR） */}
-            {postSlidePhase && <PhaseTeacherView phase={postSlidePhase} />}
+          {/* スライド後フェーズ（全体分析・意見収集・クエスト・QR） */}
+          {postSlidePhase && <PhaseTeacherView phase={postSlidePhase} />}
 
-            {/* ゲームスライド表示中はゲーム説明（生徒画面と同じ） */}
-            {phase === 'lobby' && stage === 1 && state.currentGameId && (
-              <GameIntroCard gameId={state.currentGameId as GameId} variant="teacher" />
-            )}
+          {/* ゲームスライド表示中はゲーム説明（生徒画面と同じ） */}
+          {phase === 'lobby' && stage === 1 && state.currentGameId && (
+            <GameIntroCard gameId={state.currentGameId as GameId} variant="teacher" />
+          )}
 
-            {/* Stage 3〜6（lobbyフェーズ） */}
-            {phase === 'lobby' && stage === 3 && <Stage3Share variant="teacher" />}
-            {phase === 'lobby' && stage === 4 && <Stage4Reveal variant="teacher" />}
-            {/* Stage 5 はスライド + post-slide phase（意見入力・可視化）で完結 */}
-            {phase === 'lobby' && stage === 6 && (
-              <>
-                <Stage6QuestCard variant="teacher" />
-                <QuestAggregation />
-              </>
-            )}
+          {/* Stage 3〜6（lobbyフェーズ） */}
+          {phase === 'lobby' && stage === 3 && <Stage3Share variant="teacher" />}
+          {phase === 'lobby' && stage === 4 && <Stage4Reveal variant="teacher" />}
+          {/* Stage 5 はスライド + post-slide phase（意見入力・可視化）で完結 */}
+          {phase === 'lobby' && stage === 6 && (
+            <>
+              <Stage6QuestCard variant="teacher" />
+              <QuestAggregation />
+            </>
+          )}
 
-            {/* intro時：カウントダウン大表示 */}
-            {phase === 'intro' && state.introCountdownAt !== null && (
-              <div className="rounded-2xl bg-white border border-slate-200 p-3">
-                <CountdownBig introStartedAtMs={state.introCountdownAt} />
-              </div>
-            )}
+          {/* intro時：カウントダウン大表示 */}
+          {phase === 'intro' && state.introCountdownAt !== null && (
+            <div className="rounded-2xl bg-white border border-slate-200 p-3">
+              <CountdownBig introStartedAtMs={state.introCountdownAt} />
+            </div>
+          )}
 
-            {/* active時：進捗ライブ */}
-            {phase === 'active' && (
-              <>
-                <LiveProgress />
-                <CharacterRace />
-              </>
-            )}
+          {/* active時：進捗ライブ */}
+          {phase === 'active' && (
+            <>
+              <LiveProgress />
+              <CharacterRace />
+            </>
+          )}
 
-            {/* 集計表示：results時 */}
-            {phase === 'results' && (
-              <>
-                {state.currentGameId && (
-                  <GameResultBurst gameId={state.currentGameId} />
-                )}
-                <ClassAnalysisCard />
-                <AggregationDisplay />
-              </>
-            )}
+          {/* 集計表示：results時 */}
+          {phase === 'results' && (
+            <>
+              {state.currentGameId && (
+                <GameResultBurst gameId={state.currentGameId} />
+              )}
+              <ClassAnalysisCard />
+              <AggregationDisplay />
+            </>
+          )}
 
-            {/* Stage集計：stage_summary時（post-slide phase 中は PhaseTeacherView が出すので抑制） */}
-            {phase === 'stage_summary' && !postSlidePhase && (
-              <>
-                <ClassAnalysisCard isStageSummary />
-                <AggregationDisplay isStageSummary />
-              </>
-            )}
+          {/* Stage集計：stage_summary時（post-slide phase 中は PhaseTeacherView が出すので抑制） */}
+          {phase === 'stage_summary' && !postSlidePhase && (
+            <>
+              <ClassAnalysisCard isStageSummary />
+              <AggregationDisplay isStageSummary />
+            </>
+          )}
 
-            {/* StageProgressionPanel は ▶次へ で進行する新仕様では基本不要。
-                ゲームスライド中は隠す（混乱防止）。それ以外では補助として残す */}
-            {!(phase === 'lobby' && stage === 1 && state.currentGameId) && (
-              <StageProgressionPanel />
-            )}
-          </div>
+          {/* StageProgressionPanel は ▶次へ で進行する新仕様では基本不要。
+              ゲームスライド中は隠す（混乱防止）。それ以外では補助として残す */}
+          {!(phase === 'lobby' && stage === 1 && state.currentGameId) && (
+            <StageProgressionPanel />
+          )}
 
-          <aside className="space-y-4">
+          {/* セッションリセット（最下部、本番ではほとんど使わない） */}
+          <div className="pt-12 mt-12 border-t border-slate-200">
             <Button
               variant="ghost"
               onClick={() => {
@@ -181,11 +180,11 @@ export const TeacherRoute = () => {
                   reset();
                 }
               }}
-              className="w-full text-red-700"
+              className="w-full text-red-700 text-xs"
             >
-              セッションをリセット
+              セッションをリセット（授業終了後のみ）
             </Button>
-          </aside>
+          </div>
         </div>
       )}
 
