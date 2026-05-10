@@ -338,11 +338,6 @@ const AiAvatarSection = () => (
             url: 'https://harutaka.jp/',
             desc: '動画選考プラットフォーム（日本）',
           },
-          {
-            name: 'HeyGen（AI アバター生成）',
-            url: 'https://www.heygen.com/',
-            desc: '世界中で使われるAIアバター動画ツール',
-          },
         ].map((s) => (
           <a
             key={s.url}
