@@ -89,7 +89,7 @@ const AiOverviewSection = () => (
           icon: '🎤',
           title: '一次面接（録画・チャット）',
           body: '学生がスマホで質問動画に答え、AI が話の構成・声・表情・間合いを評価。24時間どこからでも受験できる。',
-          examples: '例：SHaiN・HARUTAKA・apter・interviewmaker',
+          examples: '例：SHaiN・HARUTAKA・apter',
         },
         {
           icon: '🤝',
@@ -337,11 +337,6 @@ const AiAvatarSection = () => (
             name: 'HARUTAKA（ハルタカ）',
             url: 'https://harutaka.jp/',
             desc: '動画選考プラットフォーム（日本）',
-          },
-          {
-            name: 'インタビューメーカー',
-            url: 'https://interview-maker.jp/',
-            desc: 'オンライン面接ツール（日本）',
           },
           {
             name: 'HeyGen（AI アバター生成）',
