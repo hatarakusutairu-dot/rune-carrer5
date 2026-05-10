@@ -131,9 +131,6 @@ export const StudentPhaseBoard = () => {
         <div className="rounded-2xl bg-white border border-slate-200 p-6 min-h-[200px] text-center">
           <div className="text-6xl">👋</div>
           <p className="mt-4 text-lg font-bold">授業おつかれさま！</p>
-          <p className="mt-2 text-sm text-slate-600">
-            My Quest Cardはスクショで保存できます
-          </p>
         </div>
       )}
 
