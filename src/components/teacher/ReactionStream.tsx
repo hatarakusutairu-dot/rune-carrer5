@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSync, ReactionBurst } from '@/contexts/SyncContext';
 import { ImageWithFallback } from '@/components/common/ImageWithFallback';
 import type { ReactionEmoji } from '@shared/protocol';
 
 interface FloatingReaction extends ReactionBurst {
-  x: number; // 0-100 (vw%)
+  x: number; // 0-100 (%)
   fromLeft: boolean;
 }
 
@@ -22,21 +23,40 @@ const REACTION_KEY: Record<ReactionEmoji, string> = {
 export const ReactionStream = () => {
   const { reactionBursts } = useSync();
   const [floats, setFloats] = useState<FloatingReaction[]>([]);
+  // 全画面要素を検知して、そこにポータル描画する（投影中も見えるように）
+  const [fsElement, setFsElement] = useState<Element | null>(null);
 
+  useEffect(() => {
+    const update = () => setFsElement(document.fullscreenElement);
+    document.addEventListener('fullscreenchange', update);
+    return () => document.removeEventListener('fullscreenchange', update);
+  }, []);
+
+  // 新しい reaction が来たら 1 個だけ float を追加
+  // 既処理 id は重複追加しない（1回押し=1個保証）
+  // タイマーは effect の cleanup でキャンセルしない（複数押しで前の float が残る不具合修正）
   useEffect(() => {
     if (reactionBursts.length === 0) return;
     const last = reactionBursts[reactionBursts.length - 1];
-    const fromLeft = Math.random() < 0.5;
-    const x = fromLeft ? 5 + Math.random() * 25 : 70 + Math.random() * 25;
-    setFloats((prev) => [...prev.slice(-15), { ...last, x, fromLeft }]);
-    const timer = window.setTimeout(() => {
-      setFloats((prev) => prev.filter((f) => f.id !== last.id));
-    }, 2800);
-    return () => clearTimeout(timer);
+    let added = false;
+    setFloats((prev) => {
+      if (prev.some((f) => f.id === last.id)) return prev;
+      added = true;
+      const fromLeft = Math.random() < 0.5;
+      const x = fromLeft ? 5 + Math.random() * 25 : 70 + Math.random() * 25;
+      return [...prev.slice(-15), { ...last, x, fromLeft }];
+    });
+    if (added) {
+      window.setTimeout(() => {
+        setFloats((prev) => prev.filter((f) => f.id !== last.id));
+      }, 2800);
+    }
   }, [reactionBursts]);
 
-  return (
-    <div className="pointer-events-none fixed inset-0 z-30 overflow-hidden">
+  const target = fsElement ?? document.body;
+
+  return createPortal(
+    <div className="pointer-events-none fixed inset-0 z-[100] overflow-hidden">
       <style>
         {`
           @keyframes floatUp {
@@ -65,6 +85,7 @@ export const ReactionStream = () => {
           />
         </div>
       ))}
-    </div>
+    </div>,
+    target,
   );
 };
