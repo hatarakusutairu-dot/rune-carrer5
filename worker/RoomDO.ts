@@ -655,6 +655,10 @@ export class RoomDO extends DurableObject<Env> {
       .map((t) => (typeof t === 'string' ? t.trim().slice(0, 30) : ''))
       .filter((t) => t.length > 0)
       .slice(0, 8);
+    // 空送信は無視（誤クリック対策）
+    if (texts.length === 0) {
+      return;
+    }
     this.state.gameSkills.set(att.sid, texts);
     this.broadcastGameSkills();
   }
