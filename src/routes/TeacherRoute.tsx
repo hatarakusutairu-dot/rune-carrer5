@@ -158,8 +158,8 @@ export const TeacherRoute = () => {
               </>
             )}
 
-            {/* Stage集計：stage_summary時 */}
-            {phase === 'stage_summary' && (
+            {/* Stage集計：stage_summary時（post-slide phase 中は PhaseTeacherView が出すので抑制） */}
+            {phase === 'stage_summary' && !postSlidePhase && (
               <>
                 <ClassAnalysisCard isStageSummary />
                 <AggregationDisplay isStageSummary />
