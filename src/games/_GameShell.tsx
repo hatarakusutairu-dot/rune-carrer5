@@ -6,7 +6,7 @@ interface GameShellProps {
   description?: string;
   startedAtMs: number;
   durationMs: number;
-  progress?: { current: number; total: number };
+  progress?: { current: number; total: number; label?: string };
   children: ReactNode;
   footer?: ReactNode;
 }
@@ -36,6 +36,7 @@ export const GameShell = ({
         <div className="flex items-center gap-3">
           {progress && (
             <div className="text-xs text-slate-600">
+              {progress.label && <span className="text-slate-500 mr-1">{progress.label}</span>}
               <span className="font-bold tabular-nums">{progress.current}</span>/{progress.total}
             </div>
           )}

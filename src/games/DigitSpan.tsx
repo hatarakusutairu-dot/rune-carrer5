@@ -8,13 +8,13 @@ import { useTimeoutOnce } from './_useTimer';
 // - 桁数 N で正解 → N+1 桁
 // - 不正解 → N-1 桁（下限あり）
 // - 表示時間は桁数に応じて（多いほど長く見せる）
-// - 自分の限界が見えるので「どこまで覚えられるか」体験になる
+// - 自分の限界が見える「どこまで覚えられるか」体験
 
 const MIN_LEN = 3;
-const MAX_LEN = 12;
+const MAX_LEN = 10; // 人間の限界 7±2 を考慮
 const STARTING_LEN = 4;
-const SHOW_BASE_MS = 800;       // 1桁あたりの表示時間
-const SHOW_PER_DIGIT_MS = 350;  // 桁追加ごとに加算
+const SHOW_BASE_MS = 800;
+const SHOW_PER_DIGIT_MS = 350;
 const SHOW_MAX_MS = 5000;
 const FEEDBACK_MS = 500;
 
@@ -99,7 +99,7 @@ export const DigitSpan = ({ startedAtMs, durationMs, onComplete }: GameProps) =>
       description="正解で +1 桁、間違えで -1 桁。時間内に自分の限界を探そう。"
       startedAtMs={startedAtMs}
       durationMs={durationMs}
-      progress={{ current: maxLen, total: MAX_LEN }}
+      progress={{ current: maxLen, total: MAX_LEN, label: '最高記録' }}
       footer={
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
           <div className="rounded-lg bg-slate-50 p-2">
