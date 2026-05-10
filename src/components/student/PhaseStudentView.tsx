@@ -44,8 +44,15 @@ const QuestViewStub = () => (
 );
 
 const SurveyQRStudent = () => (
-  <div className="rounded-2xl bg-slate-100 border-2 border-slate-300 p-4 text-center">
-    <h3 className="text-base font-bold text-slate-800 mb-2">📱 アンケート</h3>
-    <p className="text-xs text-slate-500">大きい画面のQRコードを読み取ってください</p>
+  <div className="rounded-2xl bg-amber-50 border-2 border-amber-300 p-4 text-center">
+    <h3 className="text-base font-bold text-amber-900 mb-2">📱 授業アンケート</h3>
+    <p className="text-xs text-slate-600 mb-3">大きい画面のQRを読み取り、または下のリンク</p>
+    <div className="rounded-xl bg-white border border-slate-200 p-2 inline-block">
+      <img
+        src="/img/survey-qr.png"
+        alt="アンケートQRコード"
+        className="w-40 h-40 object-contain"
+      />
+    </div>
   </div>
 );

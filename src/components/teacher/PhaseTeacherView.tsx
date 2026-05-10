@@ -89,14 +89,21 @@ const QuestInputProgress = () => (
 );
 
 const SurveyQRPlaceholder = () => (
-  <div className="rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-slate-400 p-8 text-center">
-    <div className="text-5xl mb-3">📱</div>
-    <h3 className="text-xl font-black text-slate-800 mb-2">アンケートQRコード</h3>
-    <div className="rounded-xl bg-white border-2 border-dashed border-slate-300 p-12 inline-block">
-      <span className="text-slate-400">（QRコードはここに表示予定）</span>
+  <div className="rounded-2xl bg-gradient-to-br from-amber-50 via-rose-50 to-violet-50 border-2 border-amber-300 p-6 sm:p-8 text-center">
+    <div className="text-4xl mb-2">📱</div>
+    <h3 className="text-2xl font-black text-slate-800 mb-1">授業アンケート</h3>
+    <p className="text-sm text-slate-600 mb-4">
+      スマホでQRコードを読み取って回答してください（匿名）
+    </p>
+    <div className="rounded-2xl bg-white border-2 border-slate-200 p-4 inline-block shadow">
+      <img
+        src="/img/survey-qr.png"
+        alt="アンケートQRコード"
+        className="w-72 h-72 sm:w-80 sm:h-80 object-contain"
+      />
     </div>
-    <p className="mt-3 text-xs text-slate-500">
-      QRコードのURLが用意でき次第、ここに自動表示されます
+    <p className="mt-4 text-xs text-slate-500">
+      今日の授業はいかがでしたか？感想・気づきを教えてください
     </p>
   </div>
 );
