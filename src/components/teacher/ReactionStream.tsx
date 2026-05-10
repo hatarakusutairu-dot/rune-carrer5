@@ -27,7 +27,12 @@ export const ReactionStream = () => {
   const [fsElement, setFsElement] = useState<Element | null>(null);
 
   useEffect(() => {
-    const update = () => setFsElement(document.fullscreenElement);
+    const update = () => {
+      setFsElement(document.fullscreenElement);
+      // ポータル先が変わると既存floatsが新コンテナで再マウントされて
+      // アニメが頭から再生される問題を回避するため、切替時にクリア
+      setFloats([]);
+    };
     document.addEventListener('fullscreenchange', update);
     return () => document.removeEventListener('fullscreenchange', update);
   }, []);
