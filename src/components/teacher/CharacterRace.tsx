@@ -3,7 +3,18 @@ import { useSync } from '@/contexts/SyncContext';
 // 集計直前〜集計中、各クラスの回答進捗をキャラが横移動するアニメで表現
 const ICONS = ['🔥', '🌱', '⭐', '💧', '⚡', '🎯', '🌸', '🍀'];
 
-export const CharacterRace = () => {
+interface Props {
+  // 表示用の per-class カウント数（指定時はゲーム回答progress を上書き）
+  perClass?: Record<string, number>;
+  // 各クラスの母数（ゴール）。未指定なら入室人数と同じ。
+  goal?: number;
+  // タイトル文言
+  title?: string;
+  // サブタイトル
+  subtitle?: string;
+}
+
+export const CharacterRace = ({ perClass: overridePerClass, goal, title, subtitle }: Props = {}) => {
   const { state, progress } = useSync();
   if (!state) return null;
   if (state.classes.length === 0) return null;
@@ -16,24 +27,25 @@ export const CharacterRace = () => {
   return (
     <div className="rounded-2xl bg-gradient-to-br from-indigo-50 via-sky-50 to-emerald-50 border border-sky-200 p-5">
       <div className="flex items-baseline justify-between flex-wrap gap-2">
-        <h3 className="font-bold">クラスのレース</h3>
-        <span className="text-xs text-slate-500">回答が来るたびに進む</span>
+        <h3 className="font-bold">{title ?? 'クラスのレース'}</h3>
+        <span className="text-xs text-slate-500">{subtitle ?? '回答が来るたびに進む'}</span>
       </div>
       <div className="mt-4 space-y-3">
         {state.classes.map((cls, i) => {
-          const total = state.perClassCount[cls] ?? 0;
-          const done = progress.perClass[cls] ?? 0;
-          // 進捗率：そのクラスの回答完了率
-          const r = total > 0 ? done / total : 0;
-          // クラス比較も加味して横幅最大調整
-          const widthRatio = Math.min(1, r * (total / maxClassSize) * 1.2 + 0.05);
+          const classSize = state.perClassCount[cls] ?? 0;
+          const goalCount = goal ?? classSize;
+          const done = overridePerClass
+            ? (overridePerClass[cls] ?? 0)
+            : (progress.perClass[cls] ?? 0);
+          const r = goalCount > 0 ? done / goalCount : 0;
+          const widthRatio = Math.min(1, r * (goalCount / maxClassSize) * 1.2 + 0.05);
           const icon = ICONS[i % ICONS.length];
           return (
             <div key={cls}>
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-700">{icon} {cls}</span>
                 <span className="text-slate-500 tabular-nums">
-                  {done}/{total}
+                  {done}/{goalCount}
                 </span>
               </div>
               <div className="mt-1 relative h-9 rounded-full bg-white border border-sky-200 overflow-hidden">

@@ -40,7 +40,7 @@ const Stage2Summary = () => (
 );
 
 const OpinionInputProgress = () => {
-  const { state } = useSync();
+  const { state, gameSkills } = useSync();
   if (!state) return null;
   const expiresAt =
     state.activeStartedAt && state.activeDurationMs
@@ -57,7 +57,11 @@ const OpinionInputProgress = () => {
         </p>
         {expiresAt && <CountdownDisplay expiresAt={expiresAt} />}
       </div>
-      <CharacterRace />
+      <CharacterRace
+        perClass={gameSkills?.perClass}
+        title="意見入力 進捗"
+        subtitle="生徒が提出するたびに進む"
+      />
     </div>
   );
 };
@@ -74,19 +78,26 @@ const OpinionView = () => (
   </div>
 );
 
-const QuestInputProgress = () => (
-  <div className="space-y-3">
-    <div className="rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50 border-2 border-rose-300 p-5">
-      <h3 className="text-lg font-black text-rose-900">
-        🎯 My Quest 入力中
-      </h3>
-      <p className="text-sm text-slate-700 mt-1">
-        各生徒が「育てたい力・ゲームで意識すること・学校で意識すること」を入力中
-      </p>
+const QuestInputProgress = () => {
+  const { questAgg } = useSync();
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50 border-2 border-rose-300 p-5">
+        <h3 className="text-lg font-black text-rose-900">
+          🎯 My Quest 入力中
+        </h3>
+        <p className="text-sm text-slate-700 mt-1">
+          各生徒が「育てたい力・ゲームで意識すること・学校で意識すること」を入力中
+        </p>
+      </div>
+      <CharacterRace
+        perClass={questAgg?.perClass}
+        title="My Quest 入力 進捗"
+        subtitle="提出するたびに進む"
+      />
     </div>
-    <CharacterRace />
-  </div>
-);
+  );
+};
 
 const SurveyQRPlaceholder = () => (
   <div className="rounded-2xl bg-gradient-to-br from-amber-50 via-rose-50 to-violet-50 border-2 border-amber-300 p-6 sm:p-8 text-center">
