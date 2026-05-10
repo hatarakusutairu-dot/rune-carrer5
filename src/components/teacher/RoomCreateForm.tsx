@@ -28,7 +28,7 @@ export const RoomCreateForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl">
+    <form onSubmit={handleSubmit} className="max-w-xl mx-auto">
       <div className="rounded-2xl bg-white border border-slate-200 p-6">
         <h2 className="text-xl font-bold">ルームを作成</h2>
         <p className="mt-2 text-sm text-slate-600">

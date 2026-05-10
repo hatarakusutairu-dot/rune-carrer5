@@ -9,7 +9,7 @@ import { AdminDiagnostics } from '@/components/admin/AdminDiagnostics';
 export const AdminRoute = () => {
   return (
     <Layout title="管理ページ" subtitle="画像・スライド・データ管理（投影PC専用）">
-      <div className="space-y-6 max-w-5xl">
+      <div className="space-y-6 max-w-5xl mx-auto">
         <NavBack />
 
         <Section title="📥 アンケート / My Quest 結果ダウンロード" tone="amber">

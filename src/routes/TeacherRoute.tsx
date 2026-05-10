@@ -84,7 +84,7 @@ export const TeacherRoute = () => {
         <RoomCreateForm />
       ) : !state.classStarted ? (
         // 入室待機画面：参加コードを大きく + 授業開始ボタン
-        <div className="max-w-3xl space-y-4">
+        <div className="max-w-3xl mx-auto space-y-4">
           <RoomCodeDisplay code={state.code} />
           <ClassForest
             classes={state.classes}
@@ -102,7 +102,7 @@ export const TeacherRoute = () => {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3 max-w-7xl">
+        <div className="grid gap-4 lg:grid-cols-3 max-w-7xl mx-auto">
           {/* 隅にコードを小さく */}
           <div className="absolute right-20 top-4 px-2 py-1 rounded bg-white/80 border border-slate-200 text-xs">
             <span className="text-slate-500">コード </span>

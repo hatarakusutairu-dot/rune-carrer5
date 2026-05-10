@@ -4,7 +4,7 @@ import { MESSAGES } from '@/content/messages';
 
 export const HomeRoute = () => (
   <Layout title={MESSAGES.appName} subtitle="高校eスポーツコース 60分授業進行アプリ">
-    <div className="grid gap-4 sm:grid-cols-2 max-w-3xl">
+    <div className="grid gap-4 sm:grid-cols-2 max-w-3xl mx-auto">
       <Link
         to="/teacher"
         className="block rounded-2xl bg-white border border-slate-200 p-6 hover:shadow-md transition"
