@@ -12,7 +12,7 @@ export const RoomCodeDisplay = ({ code }: RoomCodeDisplayProps) => {
 
   const studentUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/#/student?code=${code}`;
+    return `${window.location.origin}/student?code=${code}`;
   }, [code]);
 
   const flash = (kind: 'url' | 'svg' | 'code') => {
