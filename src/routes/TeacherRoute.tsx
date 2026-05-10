@@ -176,8 +176,14 @@ export const TeacherRoute = () => {
             <Button
               variant="ghost"
               onClick={() => {
-                if (confirm('ルームを閉じてセッションをリセットします。よろしいですか？')) {
-                  reset();
+                if (confirm('ルームを閉じてセッションをリセットします。生徒画面も「授業おつかれさま」表示に切り替わります。よろしいですか？')) {
+                  // サーバーに T_CLOSE_ROOM を送って phase='closed' をブロードキャスト
+                  // → 生徒画面も終了表示に切り替わる
+                  send({ type: 'T_CLOSE_ROOM' });
+                  // 少し待ってから自分のセッションをリセット
+                  window.setTimeout(() => {
+                    reset();
+                  }, 300);
                 }
               }}
               className="w-full text-red-700 text-xs"
