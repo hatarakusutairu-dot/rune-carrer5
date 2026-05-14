@@ -26,6 +26,13 @@ const SCENARIOS: Scenario[] = [
   { partner: 'オンラインで何度も組む仲間', description: '顔は知らないけどよく一緒にプレイする相手と。' },
   { partner: '同じクラスで話したことない人', description: '存在は知ってるけどまだ話したことがない人と。' },
   { partner: '学校の先生・コーチ', description: '指導してくれる立場の人と。' },
+  { partner: '大会で1度だけ対戦した相手', description: '話したことはない、1度きりの対戦相手と。' },
+  { partner: '自分より下手な後輩', description: 'ゲームをまだ覚え始めの年下の後輩と。' },
+  { partner: '自分より圧倒的に上手い先輩', description: '自分より遥かにスキルが上の先輩と。' },
+  { partner: '配信を見てくれる視聴者', description: '顔は知らないけど応援してくれる視聴者と。' },
+  { partner: '卒業した一個上の先輩', description: '同じ学校を卒業した、たまにしか話さない先輩と。' },
+  { partner: '年下のきょうだい', description: '家族の年下の弟・妹と。' },
+  { partner: '転校してきたばかりの同級生', description: '今日初めて同じクラスになった人と。' },
   { partner: '名前も知らない人', description: '会ったこともない他校の人と。' },
 ];
 
