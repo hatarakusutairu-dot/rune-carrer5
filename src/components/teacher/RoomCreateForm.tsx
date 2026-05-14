@@ -5,8 +5,8 @@ import { useSync } from '@/contexts/SyncContext';
 const PRESET_HINTS = [
   '梅田大,梅田小',
   '梅田大,梅田小,名古屋',
-  '梅田大,梅田小,名古屋,博多',
-  '梅田大,梅田小,博多',
+  '梅田大,梅田小,名古屋,岡山',
+  '梅田大,梅田小,岡山',
 ];
 
 export const RoomCreateForm = () => {
