@@ -8,7 +8,12 @@ interface CodeEntryProps {
   errorMessage?: string;
 }
 
-const sanitize = (s: string): string => s.replace(/[^0-9]/g, '').slice(0, 6);
+// 全角数字（０-９）を半角に変換してから数字以外を除去
+const toHalfWidthDigits = (s: string): string =>
+  s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+
+const sanitize = (s: string): string =>
+  toHalfWidthDigits(s).replace(/[^0-9]/g, '').slice(0, 6);
 
 export const CodeEntry = ({ initialCode, onSubmit, busy, errorMessage }: CodeEntryProps) => {
   const [code, setCode] = useState(sanitize(initialCode ?? ''));
