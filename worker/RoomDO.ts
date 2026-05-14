@@ -456,6 +456,8 @@ export class RoomDO extends DurableObject<Env> {
     this.state.activeStartedAt = Date.now() + 3000; // 3秒カウントダウン後
     this.state.activeDurationMs = durationMs;
     this.broadcastPhase();
+    // 新しいゲームの進捗（全0）を即配信して、前ゲームの数字を残さない
+    this.broadcastProgress(gameId);
     // 3秒後に active へ自動遷移
     void this.ctx.storage.setAlarm(this.state.activeStartedAt);
   }
@@ -574,6 +576,13 @@ export class RoomDO extends DurableObject<Env> {
         return;
       }
       this.broadcastPhase();
+      // 入力フェーズに入ったタイミングで集計を再配信（前画面の古い数字を上書き）
+      if (enteredPhase === 'opinion-input' || enteredPhase === 'opinion-view') {
+        this.broadcastGameSkills();
+      }
+      if (enteredPhase === 'quest-input' || enteredPhase === 'quest-view') {
+        this.broadcastQuestAggregation();
+      }
       return;
     }
     this.tGotoSlide(ws, this.state.slideIndex + 1);
