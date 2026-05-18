@@ -555,16 +555,22 @@ export class RoomDO extends DurableObject<Env> {
     if (this.state.postSlideStep < phases.length) {
       this.state.postSlideStep += 1;
       const enteredPhase = phases[this.state.postSlideStep - 1];
-      // 入力フェーズに入った時は固定時間タイマーを起動
+      // 入力フェーズに入った時は固定時間タイマーを起動＋古いデータをクリア
       if (enteredPhase === 'opinion-input') {
         this.state.activeStartedAt = Date.now();
         this.state.activeDurationMs = 300_000; // 5分
+        this.state.gameSkills.clear();
+        this.broadcastGameSkills();
       } else if (enteredPhase === 'quest-input') {
         this.state.activeStartedAt = Date.now();
         this.state.activeDurationMs = 180_000; // 3分
+        this.state.questCards.clear();
+        this.broadcastQuestAggregation();
       } else if (enteredPhase === 'game-reflection-input') {
         this.state.activeStartedAt = Date.now();
         this.state.activeDurationMs = 90_000; // 1分30秒
+        this.state.skillOpinions.clear();
+        this.broadcastSkillOpinions();
       } else {
         this.state.activeStartedAt = null;
         this.state.activeDurationMs = null;
