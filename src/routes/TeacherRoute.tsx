@@ -58,9 +58,14 @@ export const TeacherRoute = () => {
   const stage = state?.currentStage ?? 0;
   const { phase: postSlidePhase } = usePostSlidePhase();
 
-  // 入力フェーズ（opinion-input / quest-input）のタイマー自動切り替え
+  // 入力フェーズ（opinion-input / quest-input / game-reflection-input）のタイマー自動切り替え
   useEffect(() => {
-    if (postSlidePhase !== 'opinion-input' && postSlidePhase !== 'quest-input') return;
+    if (
+      postSlidePhase !== 'opinion-input' &&
+      postSlidePhase !== 'quest-input' &&
+      postSlidePhase !== 'game-reflection-input'
+    )
+      return;
     if (!state?.activeStartedAt || !state?.activeDurationMs) return;
     const expiresAt = state.activeStartedAt + state.activeDurationMs;
     const remaining = expiresAt - Date.now();

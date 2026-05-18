@@ -555,14 +555,16 @@ export class RoomDO extends DurableObject<Env> {
     if (this.state.postSlideStep < phases.length) {
       this.state.postSlideStep += 1;
       const enteredPhase = phases[this.state.postSlideStep - 1];
-      // 意見入力フェーズに入った時は5分タイマーを起動
+      // 入力フェーズに入った時は固定時間タイマーを起動
       if (enteredPhase === 'opinion-input') {
         this.state.activeStartedAt = Date.now();
-        this.state.activeDurationMs = 300_000;
+        this.state.activeDurationMs = 300_000; // 5分
       } else if (enteredPhase === 'quest-input') {
-        // My Quest 入力フェーズは3分タイマー
         this.state.activeStartedAt = Date.now();
-        this.state.activeDurationMs = 180_000;
+        this.state.activeDurationMs = 180_000; // 3分
+      } else if (enteredPhase === 'game-reflection-input') {
+        this.state.activeStartedAt = Date.now();
+        this.state.activeDurationMs = 90_000; // 1分30秒
       } else {
         this.state.activeStartedAt = null;
         this.state.activeDurationMs = null;
@@ -586,6 +588,9 @@ export class RoomDO extends DurableObject<Env> {
       }
       if (enteredPhase === 'quest-input' || enteredPhase === 'quest-view') {
         this.broadcastQuestAggregation();
+      }
+      if (enteredPhase === 'game-reflection-input' || enteredPhase === 'game-reflection-view') {
+        this.broadcastSkillOpinions();
       }
       return;
     }

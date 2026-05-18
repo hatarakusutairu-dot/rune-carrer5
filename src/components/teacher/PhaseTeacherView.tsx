@@ -11,6 +11,10 @@ export const PhaseTeacherView = ({ phase }: { phase: PostSlidePhase }) => {
   switch (phase) {
     case 'stage2-summary':
       return <Stage2Summary />;
+    case 'game-reflection-input':
+      return <GameReflectionInputProgress />;
+    case 'game-reflection-view':
+      return <GameReflectionView />;
     case 'opinion-input':
       return <OpinionInputProgress />;
     case 'opinion-view':
@@ -22,6 +26,78 @@ export const PhaseTeacherView = ({ phase }: { phase: PostSlidePhase }) => {
     case 'survey-qr':
       return <SurveyQRPlaceholder />;
   }
+};
+
+const GameReflectionInputProgress = () => {
+  const { state, skillOpinions } = useSync();
+  if (!state) return null;
+  const expiresAt =
+    state.activeStartedAt && state.activeDurationMs
+      ? state.activeStartedAt + state.activeDurationMs
+      : null;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl bg-gradient-to-br from-sky-100 to-indigo-100 border-2 border-sky-300 p-5">
+        <h3 className="text-lg font-black text-sky-900">
+          💭 ゲーム感想 収集中
+        </h3>
+        <p className="text-sm text-slate-700 mt-1">
+          「結果を見てどう感じた？／ゲームをやってみてどうだった？」を自由に1分30秒。
+          または ▶ 次へ で締切。
+        </p>
+        {expiresAt && <CountdownDisplay expiresAt={expiresAt} />}
+      </div>
+      <CharacterRace
+        perClass={skillOpinions?.perClass}
+        title="感想入力 進捗"
+        subtitle="提出するたびに進む"
+      />
+    </div>
+  );
+};
+
+const GameReflectionView = () => {
+  const { skillOpinions, state } = useSync();
+  if (!skillOpinions) {
+    return (
+      <div className="rounded-xl bg-white border-2 border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+        まだ感想はありません
+      </div>
+    );
+  }
+  const expected = state?.totalStudents ?? 0;
+  const ratio = expected > 0 ? (skillOpinions.total / expected) * 100 : 0;
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 border-2 border-sky-300 p-5 space-y-3">
+      <div className="flex items-baseline justify-between flex-wrap gap-2">
+        <h3 className="text-lg font-black text-sky-900">💭 みんなの感想</h3>
+        <span className="text-sm text-slate-700">
+          <span className="text-2xl font-black tabular-nums">{skillOpinions.total}</span>
+          {expected > 0 && (
+            <span className="text-slate-500"> / {expected}人（{ratio.toFixed(0)}%）</span>
+          )}
+        </span>
+      </div>
+      {skillOpinions.opinions.length === 0 ? (
+        <div className="rounded-xl bg-white border-2 border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+          まだ提出はありません
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {skillOpinions.opinions.map((o, i) => (
+            <div
+              key={i}
+              className="rounded-xl bg-white border border-sky-200 p-3 text-sm leading-relaxed shadow-sm"
+            >
+              <div className="text-[10px] text-sky-800 font-semibold mb-1">{o.className}</div>
+              <p className="text-slate-800">{o.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-[11px] text-slate-500">匿名表示。クラス名のみ付記。</p>
+    </div>
+  );
 };
 
 const Stage2Summary = () => (
