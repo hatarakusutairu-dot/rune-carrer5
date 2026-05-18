@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { PostSlidePhase } from '@shared/slidePhases';
 import { useSync } from '@/contexts/SyncContext';
 import { AggregationDisplay } from '@/components/teacher/AggregationDisplay';
@@ -202,6 +203,11 @@ const SurveyQRPlaceholder = () => (
 );
 
 const CountdownDisplay = ({ expiresAt }: { expiresAt: number }) => {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setTick((n) => n + 1), 500);
+    return () => window.clearInterval(t);
+  }, []);
   const remainingMs = Math.max(0, expiresAt - Date.now());
   const sec = Math.floor(remainingMs / 1000);
   const m = Math.floor(sec / 60);
