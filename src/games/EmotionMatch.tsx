@@ -62,7 +62,7 @@ export const EmotionMatch = ({ startedAtMs, durationMs, onComplete }: GameProps)
       } else {
         setIdx((n) => n + 1);
       }
-    }, 700);
+    }, 300);
   };
 
   const q = questions[idx];
