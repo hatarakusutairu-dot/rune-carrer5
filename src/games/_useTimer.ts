@@ -26,13 +26,22 @@ export const useTimeoutOnce = (
     onTimeoutRef.current = onTimeout;
   }, [onTimeout]);
 
+  const firedRef = useRef(false);
   useEffect(() => {
     if (durationMs <= 0) return;
-    const remain = startedAtMs + durationMs - Date.now();
-    const t = window.setTimeout(() => {
+    const fire = () => {
+      if (firedRef.current) return;
+      firedRef.current = true;
       onTimeoutRef.current();
-    }, Math.max(0, remain));
-    return () => clearTimeout(t);
+    };
+    const remain = startedAtMs + durationMs - Date.now();
+    const t = window.setTimeout(fire, Math.max(0, remain));
+    return () => {
+      clearTimeout(t);
+      // サーバーのphase切替broadcastでアンマウントされる際の競合対策：
+      // 既に期限到来済みならアンマウント直前に発火させる（finish側でidempotent）。
+      if (Date.now() >= startedAtMs + durationMs) fire();
+    };
   }, [startedAtMs, durationMs]);
 };
 
