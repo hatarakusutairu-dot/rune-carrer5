@@ -67,6 +67,29 @@ export class SyncClient {
     return false;
   }
 
+  // スマホがバックグラウンドから復帰した時など、WSが実は死んでいるケースの強制再接続
+  forceReconnect(): void {
+    if (this.closedByUser) return;
+    if (this.ws) {
+      try {
+        this.ws.close(4000, 'force-reconnect');
+      } catch {
+        // ignore
+      }
+      this.ws = null;
+    }
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.retryCount = 0;
+    this.connect();
+  }
+
+  isOpen(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+
   private setState(s: ConnState): void {
     if (this.state === s) return;
     this.state = s;

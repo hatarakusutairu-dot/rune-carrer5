@@ -25,6 +25,13 @@ const STUDENT_SID_KEY = 'rune-carrer5:student-sid';
 const STUDENT_ROOM_KEY = 'rune-carrer5:student-room';
 const STUDENT_CLASS_KEY = 'rune-carrer5:student-class';
 
+// 生徒側はスマホブラウザのバックグラウンド/メモリ圧迫でsessionStorageが
+// 消えるケースがあるため localStorage を使う（リロード/再起動でも復帰可能）。
+const studentStore: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> =
+  typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+    ? window.localStorage
+    : { getItem: () => null, setItem: () => undefined, removeItem: () => undefined };
+
 export interface ReactionBurst {
   id: string;
   emoji: ReactionEmoji;
@@ -99,10 +106,10 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.getItem(TEACHER_TOKEN_KEY)
   );
   const [mySid, setMySid] = useState<string | null>(() =>
-    sessionStorage.getItem(STUDENT_SID_KEY)
+    studentStore.getItem(STUDENT_SID_KEY)
   );
   const [myClass, setMyClass] = useState<string | null>(() =>
-    sessionStorage.getItem(STUDENT_CLASS_KEY)
+    studentStore.getItem(STUDENT_CLASS_KEY)
   );
   const [lastAggregation, setLastAggregation] = useState<AggregationResult | null>(null);
   const [stageSummary, setStageSummary] = useState<SyncContextValue['stageSummary']>(null);
@@ -119,6 +126,8 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const [reactionBursts, setReactionBursts] = useState<ReactionBurst[]>([]);
   const [lastError, setLastError] = useState<SyncContextValue['lastError']>(null);
   const pendingActionRef = useRef<(() => void) | null>(null);
+  // 再接続時に自動で身元再送するためのアクション（S_JOIN / T_RESUME）
+  const autoRejoinRef = useRef<(() => void) | null>(null);
 
   const handleMessage = useCallback((msg: ServerMsg) => {
     switch (msg.type) {
@@ -132,9 +141,9 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       case 'JOINED':
         setState(msg.state);
         setMySid(msg.sid);
-        sessionStorage.setItem(STUDENT_SID_KEY, msg.sid);
+        studentStore.setItem(STUDENT_SID_KEY, msg.sid);
         if (msg.state.code) {
-          sessionStorage.setItem(STUDENT_ROOM_KEY, msg.state.code);
+          studentStore.setItem(STUDENT_ROOM_KEY, msg.state.code);
         }
         setMyRole('student');
         break;
@@ -215,10 +224,16 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
         onMessage: handleMessage,
         onState: (s) => {
           setConn(s);
-          if (s === 'connected' && pendingActionRef.current) {
-            const fn = pendingActionRef.current;
-            pendingActionRef.current = null;
-            fn();
+          if (s === 'connected') {
+            // 初回接続後の保留アクション（PEEK/JOIN/CREATE/RESUME）
+            if (pendingActionRef.current) {
+              const fn = pendingActionRef.current;
+              pendingActionRef.current = null;
+              fn();
+            } else if (autoRejoinRef.current) {
+              // 再接続時：身元（S_JOIN / T_RESUME）を再送してセッション復帰
+              autoRejoinRef.current();
+            }
           }
         },
       });
@@ -239,9 +254,11 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 
   const resumeAsTeacher = useCallback(
     (code: string, token: string) => {
-      ensureClient(code, () => {
+      const rejoin = () => {
         clientRef.current?.send({ type: 'T_RESUME', teacherToken: token });
-      });
+      };
+      autoRejoinRef.current = rejoin;
+      ensureClient(code, rejoin);
       setMyRole('teacher');
     },
     [ensureClient]
@@ -258,16 +275,22 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 
   const joinAsStudent = useCallback(
     (code: string, className: string, sid?: string) => {
-      sessionStorage.setItem(STUDENT_CLASS_KEY, className);
+      studentStore.setItem(STUDENT_CLASS_KEY, className);
       setMyClass(className);
+      // 再接続時に再送するため、最新の sid を含めて毎回上書きで保存
+      // sid 未指定でも、JOINED ハンドラ内のstoreから取り直して再送できるよう、
+      // 自身を呼び直す関数として登録
+      const rejoin = () => {
+        const latestSid = studentStore.getItem(STUDENT_SID_KEY) ?? sid;
+        clientRef.current?.send({ type: 'S_JOIN', code, className, sid: latestSid ?? undefined });
+      };
+      autoRejoinRef.current = rejoin;
       // 既に同じルームに接続中ならそのままJOINだけ送る
       if (clientRef.current && conn === 'connected') {
-        clientRef.current.send({ type: 'S_JOIN', code, className, sid });
+        rejoin();
         return;
       }
-      ensureClient(code, () => {
-        clientRef.current?.send({ type: 'S_JOIN', code, className, sid });
-      });
+      ensureClient(code, rejoin);
     },
     [conn, ensureClient]
   );
@@ -281,6 +304,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const reset = useCallback(() => {
     clientRef.current?.stop();
     clientRef.current = null;
+    autoRejoinRef.current = null;
     setConn('idle');
     setState(null);
     setMyRole(null);
@@ -296,15 +320,36 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     setLastError(null);
     sessionStorage.removeItem(TEACHER_TOKEN_KEY);
     sessionStorage.removeItem(TEACHER_ROOM_KEY);
-    sessionStorage.removeItem(STUDENT_SID_KEY);
-    sessionStorage.removeItem(STUDENT_ROOM_KEY);
-    sessionStorage.removeItem(STUDENT_CLASS_KEY);
+    studentStore.removeItem(STUDENT_SID_KEY);
+    studentStore.removeItem(STUDENT_ROOM_KEY);
+    studentStore.removeItem(STUDENT_CLASS_KEY);
     clearMyAnswers();
   }, []);
 
   useEffect(() => {
     return () => {
       clientRef.current?.stop();
+    };
+  }, []);
+
+  // タブがバックグラウンドから復帰した時の接続復活
+  // （iOS Safari等でWebSocketが暗黙的に死んだまま気づかないケース対策）
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const client = clientRef.current;
+      if (!client) return;
+      if (!client.isOpen()) {
+        client.forceReconnect();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener('focus', handleVisible);
+    window.addEventListener('pageshow', handleVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('focus', handleVisible);
+      window.removeEventListener('pageshow', handleVisible);
     };
   }, []);
 
@@ -384,9 +429,9 @@ export const restoreTeacherSession = (): { code: string; token: string } | null 
 };
 
 export const restoreStudentSession = (): { code: string; className: string; sid: string } | null => {
-  const code = sessionStorage.getItem(STUDENT_ROOM_KEY);
-  const className = sessionStorage.getItem(STUDENT_CLASS_KEY);
-  const sid = sessionStorage.getItem(STUDENT_SID_KEY);
+  const code = studentStore.getItem(STUDENT_ROOM_KEY);
+  const className = studentStore.getItem(STUDENT_CLASS_KEY);
+  const sid = studentStore.getItem(STUDENT_SID_KEY);
   if (code && className && sid) return { code, className, sid };
   return null;
 };
