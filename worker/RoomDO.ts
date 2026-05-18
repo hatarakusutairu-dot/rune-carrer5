@@ -889,6 +889,12 @@ export class RoomDO extends DurableObject<Env> {
       this.state.personalScores.set(att.sid, merged);
     }
     this.broadcastProgress(gameId);
+    // 既にresults遷移済みでも、遅延到着のS_ANSWERを反映してAGGREGATIONを再計算・再broadcast
+    // （クライアント側 useTimeoutOnce のunmount時fireがサーバーのphase遷移broadcast直後に届くケース対応）
+    if (this.state.phase === 'results' && this.state.currentGameId === gameId) {
+      const result = this.computeAggregation(gameId);
+      this.broadcast({ type: 'AGGREGATION', result });
+    }
   }
 
   // ─────────── Reactions ───────────
