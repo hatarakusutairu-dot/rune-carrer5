@@ -34,13 +34,14 @@ export const useTimeoutOnce = (
       firedRef.current = true;
       onTimeoutRef.current();
     };
-    const remain = startedAtMs + durationMs - Date.now();
+    const scheduledAt = Date.now();
+    const remain = startedAtMs + durationMs - scheduledAt;
     const t = window.setTimeout(fire, Math.max(0, remain));
     return () => {
       clearTimeout(t);
-      // サーバーのphase切替broadcastでアンマウントされる際の競合対策：
-      // 既に期限到来済みならアンマウント直前に発火させる（finish側でidempotent）。
-      if (Date.now() >= startedAtMs + durationMs) fire();
+      // 一定時間経過後のクリーンアップ＝サーバーphase切替/teacher強制終了/時間切れと判断し
+      // アンマウント直前に発火（finish側でidempotent）。500ms未満はStrictMode等の即時アンマウントなのでスキップ。
+      if (!firedRef.current && Date.now() - scheduledAt >= 500) fire();
     };
   }, [startedAtMs, durationMs]);
 };
