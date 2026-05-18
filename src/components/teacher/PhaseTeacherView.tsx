@@ -79,7 +79,11 @@ const OpinionView = () => (
 );
 
 const QuestInputProgress = () => {
-  const { questAgg } = useSync();
+  const { questAgg, state } = useSync();
+  const expiresAt =
+    state?.activeStartedAt && state?.activeDurationMs
+      ? state.activeStartedAt + state.activeDurationMs
+      : null;
   return (
     <div className="space-y-3">
       <div className="rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50 border-2 border-rose-300 p-5">
@@ -87,8 +91,10 @@ const QuestInputProgress = () => {
           🎯 My Quest 入力中
         </h3>
         <p className="text-sm text-slate-700 mt-1">
-          各生徒が「育てたい力・ゲームで意識すること・学校で意識すること」を入力中
+          各生徒が「育てたい力・ゲームで意識すること・学校で意識すること」を入力中。
+          3分タイマー、または ▶ 次へ で締切。
         </p>
+        {expiresAt && <CountdownDisplay expiresAt={expiresAt} />}
       </div>
       <CharacterRace
         perClass={questAgg?.perClass}

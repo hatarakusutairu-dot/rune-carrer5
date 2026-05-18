@@ -559,6 +559,10 @@ export class RoomDO extends DurableObject<Env> {
       if (enteredPhase === 'opinion-input') {
         this.state.activeStartedAt = Date.now();
         this.state.activeDurationMs = 300_000;
+      } else if (enteredPhase === 'quest-input') {
+        // My Quest 入力フェーズは3分タイマー
+        this.state.activeStartedAt = Date.now();
+        this.state.activeDurationMs = 180_000;
       } else {
         this.state.activeStartedAt = null;
         this.state.activeDurationMs = null;

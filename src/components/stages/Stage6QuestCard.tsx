@@ -78,12 +78,27 @@ const TeacherView = () => (
 );
 
 const StudentView = () => {
-  const { send } = useSync();
+  const { send, state } = useSync();
   const [growSkill, setGrowSkill] = useState('');
   const [gameAction, setGameAction] = useState('');
   const [schoolAction, setSchoolAction] = useState('');
   const [saved, setSaved] = useState<ReturnType<typeof loadQuestCard>>(null);
   const [editing, setEditing] = useState(false);
+
+  // 残り時間表示用の再描画用 tick
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setTick((n) => n + 1), 500);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const expiresAt =
+    state?.activeStartedAt && state?.activeDurationMs
+      ? state.activeStartedAt + state.activeDurationMs
+      : null;
+  const remainingMs = expiresAt ? Math.max(0, expiresAt - Date.now()) : 0;
+  const remainMin = Math.floor(remainingMs / 60000);
+  const remainSec = Math.floor((remainingMs % 60000) / 1000);
 
   // 既存カード読み込み
   useEffect(() => {
@@ -158,7 +173,7 @@ const StudentView = () => {
     );
   }
 
-  // 入力フォーム
+  // 入力フォーム（自分の言葉で書くがメイン、ヒント例は折りたたみ）
   return (
     <div className="rounded-2xl bg-white border border-amber-200 p-5 space-y-5">
       <div>
@@ -170,100 +185,50 @@ const StudentView = () => {
         </h2>
         {recommended && (
           <p className="mt-2 text-xs text-slate-600">
-            ヒント：今日のあなたの傾向（{recommended.label}）から想像すると選びやすいかも。
+            ヒント：今日のあなたの傾向（{recommended.label}）から想像すると書きやすいかも。
           </p>
+        )}
+        {expiresAt && (
+          <div className="mt-3 text-center">
+            <div className="text-2xl font-black tabular-nums text-amber-900">
+              残り {remainMin}:{String(remainSec).padStart(2, '0')}
+            </div>
+          </div>
         )}
       </div>
 
-      {/* 1. Grow Skill */}
-      <div>
-        <label className="block text-sm font-semibold text-slate-800 mb-2">
-          ① 育てたい力（選ぶ or 自分で書く）
-        </label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {GROW_SKILLS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setGrowSkill(s)}
-              className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                growSkill === s
-                  ? 'bg-amber-500 text-white border-amber-500'
-                  : 'bg-white text-slate-700 border-slate-300'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-        <input
-          type="text"
-          value={growSkill}
-          onChange={(e) => setGrowSkill(e.target.value.slice(0, 30))}
-          placeholder="自分の言葉で書いてもOK"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        />
-      </div>
+      <QuestField
+        label="① 育てたい力"
+        placeholder="例：コミュニケーション力／継続力／判断力 など"
+        value={growSkill}
+        onChange={(v) => setGrowSkill(v.slice(0, 30))}
+        rows={2}
+        maxLen={30}
+        hints={GROW_SKILLS}
+        hintColor="amber"
+      />
 
-      {/* 2. Game Action */}
-      <div>
-        <label className="block text-sm font-semibold text-slate-800 mb-2">
-          ② ゲームの中で意識したい行動
-        </label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {GAME_ACTIONS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setGameAction(s)}
-              className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                gameAction === s
-                  ? 'bg-emerald-600 text-white border-emerald-600'
-                  : 'bg-white text-slate-700 border-slate-300'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-        <input
-          type="text"
-          value={gameAction}
-          onChange={(e) => setGameAction(e.target.value.slice(0, 40))}
-          placeholder="自分の言葉で書いてもOK"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        />
-      </div>
+      <QuestField
+        label="② ゲームの中で意識したい行動"
+        placeholder="例：味方への声かけ／毎日の練習継続 など"
+        value={gameAction}
+        onChange={(v) => setGameAction(v.slice(0, 40))}
+        rows={2}
+        maxLen={40}
+        hints={GAME_ACTIONS}
+        hintColor="emerald"
+      />
 
-      {/* 3. School Action */}
-      <div>
-        <label className="block text-sm font-semibold text-slate-800 mb-2">
-          ③ 学校生活で意識したい行動
-        </label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {SCHOOL_ACTIONS.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSchoolAction(s)}
-              className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                schoolAction === s
-                  ? 'bg-cyan-600 text-white border-cyan-600'
-                  : 'bg-white text-slate-700 border-slate-300'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-        <input
-          type="text"
-          value={schoolAction}
-          onChange={(e) => setSchoolAction(e.target.value.slice(0, 40))}
-          placeholder="自分の言葉で書いてもOK"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        />
-      </div>
+      <QuestField
+        label="③ 学校生活で意識したい行動"
+        placeholder="例：質問を1日1個する／挨拶を自分から など"
+        value={schoolAction}
+        onChange={(v) => setSchoolAction(v.slice(0, 40))}
+        rows={2}
+        maxLen={40}
+        hints={SCHOOL_ACTIONS}
+        hintColor="cyan"
+      />
 
       <Button
         onClick={submit}
@@ -272,6 +237,74 @@ const StudentView = () => {
       >
         My Quest Card を作る
       </Button>
+    </div>
+  );
+};
+
+// 入力フィールド + 折りたたみヒント例
+const HINT_COLORS = {
+  amber: 'bg-amber-100 text-amber-900 hover:bg-amber-200 border-amber-300',
+  emerald: 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200 border-emerald-300',
+  cyan: 'bg-cyan-100 text-cyan-900 hover:bg-cyan-200 border-cyan-300',
+} as const;
+
+const QuestField = ({
+  label,
+  placeholder,
+  value,
+  onChange,
+  rows,
+  maxLen,
+  hints,
+  hintColor,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  rows: number;
+  maxLen: number;
+  hints: readonly string[];
+  hintColor: keyof typeof HINT_COLORS;
+}) => {
+  const [showHints, setShowHints] = useState(false);
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-2">
+        <label className="text-sm font-semibold text-slate-800">{label}</label>
+        <span className="text-[10px] text-slate-400">
+          {value.length} / {maxLen}
+        </span>
+      </div>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        maxLength={maxLen}
+        className="w-full rounded-lg border-2 border-slate-300 focus:border-amber-500 px-3 py-2 text-base resize-none outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => setShowHints((v) => !v)}
+        className="mt-1.5 text-[11px] text-slate-500 hover:text-slate-700 underline"
+      >
+        {showHints ? 'ヒント例を隠す' : '💡 ヒント例を見る（自分の言葉でOK）'}
+      </button>
+      {showHints && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {hints.map((h) => (
+            <button
+              key={h}
+              type="button"
+              onClick={() => onChange(h)}
+              className={`px-2.5 py-1 rounded-full text-[11px] border transition ${HINT_COLORS[hintColor]}`}
+            >
+              {h}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
