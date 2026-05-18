@@ -7,8 +7,9 @@ export const analyzeDigitSpan = (
   p: Extract<AnswerPayload, { kind: 'digit_span' }>
 ): PersonalAnalysis => {
   const ratio = p.correct / Math.max(p.total, 1);
-  const high = p.maxLen >= 6;
-  const mid = p.maxLen >= 4;
+  // 桁数と正答率の両方を見る（4桁=スタート時点なので maxLen 単独では区別できないため）
+  const high = p.maxLen >= 6 && ratio >= 0.5;
+  const mid = p.maxLen >= 5 || (p.maxLen >= 4 && ratio >= 0.5);
 
   const headline = high
     ? '長い情報を一気に保持できる集中タイプ'
