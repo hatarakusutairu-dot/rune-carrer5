@@ -10,11 +10,15 @@ export const analyzeBalloon = (
   const popped = p.popped.filter(Boolean).length;
   const banked = p.banked.reduce((a, b) => a + b, 0);
   const trials = p.pumps.length;
+  const popRate = trials > 0 ? popped / trials : 0;
 
+  // 平均ふくらまし数で基本的な性向を判定し、pop率が高すぎる場合（リスク制御が破綻）はlowに降格
   let band: 'low' | 'mid' | 'high';
   if (avg < 4) band = 'low';
   else if (avg < 8) band = 'mid';
   else band = 'high';
+  // pop率6割以上は「計算された挑戦」とは言えない → 慎重型と分類し直す
+  if (popRate >= 0.6) band = 'low';
 
   const headline =
     band === 'low'

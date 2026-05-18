@@ -7,8 +7,9 @@ export const analyzeWasabiWaiter = (
   p: Extract<AnswerPayload, { kind: 'wasabi_waiter' }>
 ): PersonalAnalysis => {
   const accuracy = p.served > 0 ? p.correctOrders / p.served : 0;
+  // 数だけ捌いても正答率が低ければ「捌けた」とは言えないため両方で判定
   const high = p.served >= 12 && accuracy >= 0.8;
-  const mid = p.served >= 6;
+  const mid = (p.served >= 6 && accuracy >= 0.6) || (p.served >= 4 && accuracy >= 0.8);
 
   const headline = high
     ? '複数のことを同時に捌ける接客タイプ'
