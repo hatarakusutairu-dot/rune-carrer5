@@ -108,12 +108,14 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       break;
     }
     case 'wasabi_waiter': {
-      // マルチタスク・対人サービス：捌いた数と正確性
+      // マルチタスク・対人サービス：捌いた数 × 正確性 × 対応率（取りこぼし考慮）
       const accuracy = payload.served > 0 ? payload.correctOrders / payload.served : 0;
-      s.support += Math.min(6, accuracy * 4 + payload.served * 0.2);
-      s.balance += Math.min(4, accuracy * 5);
-      // 多く捌けたかは「現場を回す」リーダー力
-      s.leader += Math.min(5, payload.served * 0.5);
+      const totalDemand = payload.served + payload.missed;
+      const handleRate = totalDemand > 0 ? payload.served / totalDemand : 0;
+      // 取りこぼし多い＝マルチタスクではない／一部だけ対応 → handleRateで減衰
+      s.support += Math.min(6, accuracy * 4 * handleRate + payload.served * 0.15);
+      s.balance += Math.min(4, accuracy * 4 * handleRate);
+      s.leader += Math.min(5, payload.served * 0.3 * handleRate + handleRate * 2);
       s.analysis += Math.min(2, accuracy * 2);
       break;
     }

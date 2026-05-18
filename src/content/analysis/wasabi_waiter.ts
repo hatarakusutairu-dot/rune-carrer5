@@ -7,9 +7,14 @@ export const analyzeWasabiWaiter = (
   p: Extract<AnswerPayload, { kind: 'wasabi_waiter' }>
 ): PersonalAnalysis => {
   const accuracy = p.served > 0 ? p.correctOrders / p.served : 0;
-  // 数だけ捌いても正答率が低ければ「捌けた」とは言えないため両方で判定
-  const high = p.served >= 12 && accuracy >= 0.8;
-  const mid = (p.served >= 6 && accuracy >= 0.6) || (p.served >= 4 && accuracy >= 0.8);
+  // 対応率：要望に対してどれだけ応えられたか（無視した分はマルチタスクとは言えない）
+  const totalDemand = p.served + p.missed;
+  const handleRate = totalDemand > 0 ? p.served / totalDemand : 0;
+  // 数だけ捌いても正答率が低ければ「捌けた」とは言えない／対応率が低い＝多くを無視＝マルチタスクではない
+  const high = p.served >= 12 && accuracy >= 0.8 && handleRate >= 0.5;
+  const mid =
+    (p.served >= 6 && accuracy >= 0.6 && handleRate >= 0.3) ||
+    (p.served >= 4 && accuracy >= 0.8 && handleRate >= 0.4);
 
   const headline = high
     ? '複数のことを同時に捌ける接客タイプ'
@@ -21,7 +26,7 @@ export const analyzeWasabiWaiter = (
     ? 'あなたは複数のお客さんを同時にさばきながら正確に注文を出せる、対人マルチタスクが強いタイプ。海外の採用検査でも測定される指標で、接客・サービス・チームリーダーなど人と関わる仕事で力を発揮します。'
     : mid
       ? 'あなたは「焦らず、確実に1人ずつ対応する」タイプ。マルチタスクは控えめでも、丁寧さで信頼を積み重ねる強みがあります。'
-      : '今回は捌ける数が少なめでしたが、これは「相手の気持ちにじっくり付き合える」強みの裏返しでもあります。';
+      : `今回は対応した数（${p.served}）に対して取りこぼしが${p.missed}件と、「一度に多くを抱えるより、目の前の対応に集中する」タイプの動きが出ました。じっくり関わる場面では強みになります。`;
 
   const strengths = high
     ? ['複数の状況を同時に把握できる', '優先順位を素早くつけられる', '正確さとスピードを両立できる']
@@ -71,6 +76,7 @@ export const analyzeWasabiWaiter = (
       { label: '注文一致', value: `${p.correctOrders}` },
       { label: '取りこぼし', value: `${p.missed}` },
       { label: '正答率', value: p.served > 0 ? `${Math.round(accuracy * 100)}%` : '—' },
+      { label: '対応率', value: totalDemand > 0 ? `${Math.round(handleRate * 100)}%` : '—' },
     ],
   };
 };
