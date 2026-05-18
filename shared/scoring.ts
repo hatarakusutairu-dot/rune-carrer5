@@ -26,12 +26,11 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
   const s = emptyScores();
   switch (payload.kind) {
     case 'balloon': {
-      const avgPumps = payload.pumps.length
-        ? payload.pumps.reduce((a, b) => a + b, 0) / payload.pumps.length
-        : 0;
+      const trials = payload.pumps.length;
+      if (trials === 0) break; // 未プレイは0点
+      const avgPumps = payload.pumps.reduce((a, b) => a + b, 0) / trials;
       const totalBanked = payload.banked.reduce((a, b) => a + b, 0);
-      const popRate =
-        payload.popped.filter(Boolean).length / Math.max(payload.popped.length, 1);
+      const popRate = payload.popped.filter(Boolean).length / trials;
       // 多く膨らます=チャレンジ、確実に止める=バランス、安定獲得=継続
       s.challenge += Math.min(avgPumps / 2, 6);
       s.balance += Math.max(0, 5 - popRate * 5);
@@ -39,8 +38,9 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       break;
     }
     case 'digit_span': {
-      const ratio = payload.correct / Math.max(payload.total, 1);
-      s.analysis += ratio * 6 + (payload.maxLen - 3);
+      if (payload.total === 0) break; // 未プレイは0点
+      const ratio = payload.correct / payload.total;
+      s.analysis += ratio * 6 + Math.max(0, payload.maxLen - 3);
       s.continuity += ratio * 3;
       // 限界桁数 5以上 = 高い記憶容量を「挑戦」と捉える
       if (payload.maxLen >= 5) s.challenge += Math.min(3, payload.maxLen - 4);
@@ -59,7 +59,8 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       break;
     }
     case 'emotion_match': {
-      const ratio = payload.correct / Math.max(payload.total, 1);
+      if (payload.total === 0) break; // 未プレイは0点
+      const ratio = payload.correct / payload.total;
       s.support += ratio * 6;
       s.balance += ratio * 3;
       // 感情の微差を見抜けることは「分析眼」でもある
@@ -67,17 +68,24 @@ export const scoreAnswer = (payload: AnswerPayload): Record<SeedType, number> =>
       break;
     }
     case 'money_split': {
+      if (payload.selfShares.length === 0) break; // 未プレイは0点
       // 自分取り分が小さい = 利他（サポート）、半々 = バランス
       const avgSelf =
-        payload.selfShares.reduce((a, b) => a + b, 0) /
-        Math.max(payload.selfShares.length, 1);
+        payload.selfShares.reduce((a, b) => a + b, 0) / payload.selfShares.length;
       const fairness = 1 - Math.abs(5 - avgSelf) / 5; // 5に近いほど公平
       const altruism = Math.max(0, (5 - avgSelf) / 5); // 5未満で利他
+      // 配分のばらつき（標準偏差）：相手によって判断を変える柔軟性
+      const variance =
+        payload.selfShares.reduce((acc, v) => acc + (v - avgSelf) ** 2, 0) /
+        payload.selfShares.length;
+      const stdev = Math.sqrt(variance);
       s.support += altruism * 6 + fairness * 2;
       s.balance += fairness * 4;
       s.leader += avgSelf > 6 ? (avgSelf - 6) * 2 : 0; // 強気は決断
       // 強気（自分取り分多め）は「攻めの姿勢」=チャレンジでもある
       if (avgSelf > 5.5) s.challenge += Math.min(4, (avgSelf - 5.5) * 2);
+      // 相手によって柔軟に変える = 分析眼（関係性の読み）
+      if (stdev >= 1.5) s.analysis += Math.min(3, (stdev - 1.5) * 2);
       break;
     }
     case 'stop_signal': {
