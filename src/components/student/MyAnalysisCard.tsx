@@ -57,7 +57,7 @@ export const MyAnalysisCard = ({ gameId, refreshKey }: MyAnalysisCardProps) => {
 
       {/* レーダー */}
       <section className="flex justify-center">
-        <RadarChart scores={scores} max={10} size={240} color="emerald" label="このゲームから見えた芽の傾向" />
+        <RadarChart scores={scores} size={240} color="emerald" label="このゲームから見えた芽の傾向" />
       </section>
 
       {/* サマリ */}
