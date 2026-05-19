@@ -2,26 +2,35 @@ import { useState } from 'react';
 import { Button } from '@/components/common/Button';
 import { useSync } from '@/contexts/SyncContext';
 
-const PRESET_HINTS = [
-  '梅田大,梅田小',
-  '梅田大,梅田小,名古屋',
-  '梅田大,梅田小,名古屋,岡山',
-  '梅田大,梅田小,岡山',
-];
+// 校舎・教室の固定一覧。授業当日に参加するクラスをチェックで選ぶ。
+const AVAILABLE_CLASSES = [
+  '梅田第1',
+  '梅田第2',
+  '梅田7F',
+  '名古屋',
+  '岡山',
+] as const;
 
 export const RoomCreateForm = () => {
   const { createRoom, conn, lastError } = useSync();
-  const [classText, setClassText] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const isCreating = conn === 'connecting';
+
+  const toggle = (cls: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(cls)) next.delete(cls);
+      else next.add(cls);
+      return next;
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const list = classText
-      .split(/[,、\n]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
+    // AVAILABLE_CLASSESの並び順を維持して配列化
+    const list = AVAILABLE_CLASSES.filter((c) => selected.has(c));
     if (list.length === 0) {
-      alert('クラスを1つ以上入力してください');
+      alert('参加するクラスを1つ以上選んでください');
       return;
     }
     createRoom(list);
@@ -32,33 +41,44 @@ export const RoomCreateForm = () => {
       <div className="rounded-2xl bg-white border border-slate-200 p-6">
         <h2 className="text-xl font-bold">ルームを作成</h2>
         <p className="mt-2 text-sm text-slate-600">
-          今日参加するクラスを入力してください。生徒はここから選んで入室します。
+          今日参加するクラスを選んでください。生徒はここから自分のクラスを選択して入室します。
         </p>
-        <label className="block mt-6 text-sm font-medium">
-          クラス一覧（カンマまたは改行区切り）
-        </label>
-        <textarea
-          value={classText}
-          onChange={(e) => setClassText(e.target.value)}
-          placeholder="例：梅田大,梅田小,名古屋"
-          rows={3}
-          className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2"
-        />
-        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-          {PRESET_HINTS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setClassText(p)}
-              className="px-2 py-1 rounded-full bg-slate-100 hover:bg-slate-200"
-            >
-              {p}
-            </button>
-          ))}
+
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {AVAILABLE_CLASSES.map((cls) => {
+            const checked = selected.has(cls);
+            return (
+              <label
+                key={cls}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition ${
+                  checked
+                    ? 'border-emerald-500 bg-emerald-50'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggle(cls)}
+                  className="w-5 h-5 accent-emerald-600"
+                />
+                <span className={`font-semibold ${checked ? 'text-emerald-900' : 'text-slate-700'}`}>
+                  {cls}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 text-xs text-slate-500">
+          選択中：
+          {selected.size === 0
+            ? '—'
+            : AVAILABLE_CLASSES.filter((c) => selected.has(c)).join('・')}
         </div>
 
         <div className="mt-6">
-          <Button type="submit" disabled={isCreating}>
+          <Button type="submit" disabled={isCreating || selected.size === 0}>
             {isCreating ? '作成中…' : 'ルームを作成して開始'}
           </Button>
         </div>
